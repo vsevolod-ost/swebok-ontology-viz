@@ -76,6 +76,7 @@ li.collapsed > ul{display:none}
 #ka-svg .kanode.hl circle{stroke-width:3}
 #ka-svg .kaedge .vis{fill:none;stroke-width:1.5;opacity:.55;transition:opacity .15s}
 #ka-svg .kaedge .hit{fill:none;stroke:transparent;stroke-width:10;pointer-events:stroke;cursor:pointer}
+@media (pointer:coarse){ #ka-svg .kaedge .hit{stroke-width:22} }
 #ka-svg .badge{display:none;pointer-events:none}
 #ka-svg .badge.hl{display:inline}
 #ka-svg .badge circle{fill:var(--surface);stroke-width:1.4}
@@ -173,12 +174,38 @@ canvas.dragging{cursor:grabbing}
 .detail .rel-list a{display:block;font-size:12px;padding:2px 0;color:var(--accent);cursor:pointer;text-decoration:none}
 .detail .rel-list a:hover{text-decoration:underline}
 .detail .rel-list b{display:inline-block;width:14px;text-align:center}
+.detail .sum{font-size:12px;color:var(--ink2);margin-top:2px}
+.detail .edge-h{font-size:14px;margin:0 22px 6px 0;font-weight:600}
+.detail .more-btn{display:none}
+.touch-only{display:none}
+@media (hover:none){ .touch-only{display:inline} .mouse-only{display:none} }
 footer{padding:4px 16px;color:var(--muted);font-size:11px;border-top:1px solid var(--grid)}
+.filters > summary{display:none}
 @media (max-width:700px){
+  header{padding:8px 16px 2px;gap:2px 10px}
+  header h1{font-size:14px}
+  header .stats{font-size:11px}
+  header,nav{flex:0 0 auto}
+  nav{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding:0 4px}
+  nav button{white-space:nowrap;padding:8px 10px 6px}
+  footer{display:none}
   .net-wrap{flex-direction:column}
-  .net-side{width:auto;flex:0 0 auto;max-height:40%;border-right:none;border-bottom:1px solid var(--grid)}
-  .net-canvas-wrap{flex:1 1 auto;min-height:320px}
+  .net-side{width:auto;flex:0 0 auto;max-height:45%;border-right:none;border-bottom:1px solid var(--grid);padding:8px 16px}
+  .filters > summary{display:list-item;cursor:pointer;font-size:12.5px;color:var(--ink2);padding:2px 0}
+  .net-canvas-wrap{flex:1 1 auto;min-height:260px}
   .tree-view,.ka-view,.lpm-view,.chk-view{padding:10px 16px}
+  body.sheet .tree-view,body.sheet .ka-view,body.sheet .lpm-view{padding-bottom:150px}
+  .ka-view{gap:20px}
+  .ka-view .col{flex-basis:100%}
+  /* ЛПМ у повну ширину нечитабельна (шрифт ~4 px) — горизонтальна прокрутка */
+  #lpm-svg{min-width:980px}
+  .hint{display:none}
+  /* деталі — компактна нижня шторка: граф над нею лишається видимим; повна довідка — за кнопкою */
+  .detail{position:fixed;left:0;right:0;top:auto;bottom:0;width:auto;max-width:none;max-height:40vh;
+    border-radius:12px 12px 0 0;border-width:1px 0 0;padding:10px 16px calc(10px + env(safe-area-inset-bottom))}
+  .detail.expanded{max-height:78vh}
+  .detail:not(.expanded) .more{display:none}
+  .detail .more-btn{display:inline-block;margin-top:8px}
 }
 </style>
 </head>
@@ -238,17 +265,19 @@ footer{padding:4px 16px;color:var(--muted);font-size:11px;border-top:1px solid v
       <div class="net-side">
         <input type="search" id="search" placeholder="Пошук за назвою або ID…">
         <div class="searchinfo" id="searchinfo"></div>
+        <details class="filters" id="filters"><summary>Фільтри груп і типів зв'язків</summary>
         <h3>Групи індивідів <span class="btns"><button class="small" data-all="group">усі</button><button class="small" data-none="group">жодної</button></span></h3>
         <div id="group-filters"></div>
         <div id="extra-filters" class="extra"></div>
         <h3>Типи зв'язків <span class="btns"><button class="small" data-all="rel">усі</button><button class="small" data-none="rel">жодного</button></span></h3>
         <div id="rel-filters"></div>
+        </details>
       </div>
       <div class="net-canvas-wrap">
         <canvas id="canvas"></canvas>
         <div class="canvas-tools"><button class="small" id="fit">Вписати в екран</button></div>
         <div class="tip" id="tip"></div>
-        <div class="hint">Колесо — зум · фон — панорама · клік по вузлу — деталі й кольорові УЗ · Enter у пошуку — до збігу</div>
+        <div class="hint">Колесо — зум · фон — панорама · клік по вузлу чи ребру — деталі й кольорові УЗ · Enter у пошуку — до збігу</div>
       </div>
     </div>
   </section>
@@ -312,27 +341,44 @@ document.querySelectorAll('nav button').forEach(btn =>
   btn.addEventListener('click', () => showView(btn.dataset.view)));
 
 // ---------- detail panel ----------
+// На телефоні панель — компактна шторка знизу (заголовок + зведення), повна довідка (.more) — за кнопкою,
+// щоб підсвічені зв'язки на схемі лишалися видимими.
+const detailEl = document.getElementById('detail');
+function renderDetail(head, more) {
+  const body = document.getElementById('detail-body');
+  body.innerHTML = head + (more ? `<button class="small more-btn" id="more-btn">Уся довідка ▴</button><div class="more">${more}</div>` : '');
+  body.querySelectorAll('a[data-id]').forEach(a => a.addEventListener('click', () => select(a.dataset.id)));
+  const mb = document.getElementById('more-btn');
+  if (mb) mb.addEventListener('click', () => {
+    detailEl.classList.toggle('expanded');
+    mb.textContent = detailEl.classList.contains('expanded') ? 'Згорнути ▾' : 'Уся довідка ▴';
+  });
+  detailEl.classList.remove('expanded');
+  detailEl.classList.add('show');
+  detailEl.scrollTop = 0;
+  document.body.classList.add('sheet');
+}
 function showDetail(id) {
   const info = IND[id];
-  const body = document.getElementById('detail-body');
   if (!info) {
     const c = DATA.classes[id];
     if (!c) return;
     const inst = Object.values(IND).filter(i => i.types.includes(id));
-    let html = `<h2>${esc(c.label)}</h2>`;
-    if (c.label_en) html += `<div class="en">${esc(c.label_en)}</div>`;
-    html += `<span class="type">owl:Class</span><dl><dt>ID</dt><dd><code>swe:${esc(c.id)}</code></dd>`;
+    let head = `<h2>${esc(c.label)}</h2>`;
+    if (c.label_en) head += `<div class="en">${esc(c.label_en)}</div>`;
+    head += `<span class="type">owl:Class</span>`;
+    if (inst.length) head += `<div class="sum">індивідів: ${inst.length}</div>`;
+    let html = `<dl><dt>ID</dt><dd><code>swe:${esc(c.id)}</code></dd>`;
     if (c.comment) html += `<dt>Опис</dt><dd>${esc(c.comment)}</dd>`;
     if (c.parents.length) html += `<dt>rdfs:subClassOf</dt><dd>${c.parents.map(esc).join(', ')}</dd>`;
     if (inst.length) html += `<dt>Індивіди (${inst.length})</dt><dd class="rel-list">` +
       inst.map(i => `<a data-id="${esc(i.id)}">${esc(i.label)}</a>`).join('') + `</dd>`;
-    html += `</dl>`;
-    body.innerHTML = html;
+    renderDetail(head, html + `</dl>`);
   } else {
-    let html = `<h2>${esc(info.label)}</h2>`;
-    if (info.label_en) html += `<div class="en">${esc(info.label_en)}</div>`;
-    html += `<span class="type" style="background:${groupColor(info.group)}">${esc(info.types.join(', ') || info.primaryType)}</span>`;
-    html += `<dl><dt>ID</dt><dd><code>swe:${esc(info.id)}</code></dd>`;
+    let head = `<h2>${esc(info.label)}</h2>`;
+    if (info.label_en) head += `<div class="en">${esc(info.label_en)}</div>`;
+    head += `<span class="type" style="background:${groupColor(info.group)}">${esc(info.types.join(', ') || info.primaryType)}</span>`;
+    let html = `<dl><dt>ID</dt><dd><code>swe:${esc(info.id)}</code></dd>`;
     if (info.comment) html += `<dt>Опис</dt><dd>${esc(info.comment)}</dd>`;
     const keys = Object.keys(info.props).sort((a, b) => {
       const o = Object.keys(DATA.propLabel);
@@ -350,30 +396,54 @@ function showDetail(id) {
     const outE = DATA.edges.filter(e => e.source === id), inE = DATA.edges.filter(e => e.target === id);
     if (outE.length) html += `<dt>Вихідні зв'язки (${outE.length})</dt><dd class="rel-list">` + outE.map(e => rel(e, e.target, true)).join('') + `</dd>`;
     if (inE.length) html += `<dt>Вхідні зв'язки (${inE.length})</dt><dd class="rel-list">` + inE.map(e => rel(e, e.source, false)).join('') + `</dd>`;
-    html += `</dl>`;
-    body.innerHTML = html;
+    const sum = [];
+    if (info.props.lpmFormula) sum.push('формула: ' + esc(info.props.lpmFormula[0]));
+    if (srcBadge(info.props)) sum.push(esc(srcBadge(info.props)));
+    sum.push(`зв'язків: вих. ${outE.length} · вх. ${inE.length}`);
+    head += `<div class="sum">${sum.join(' · ')}</div>`;
+    renderDetail(head, html + `</dl>`);
   }
-  body.querySelectorAll('a[data-id]').forEach(a => a.addEventListener('click', () => select(a.dataset.id)));
-  document.getElementById('detail').classList.add('show');
 }
+function showEdgeDetail(e) {
+  const u = uzOf(e.rel), l = relLetter(e.rel), c = relColor(e.rel);
+  const head = `<div class="edge-h"><a data-id="${esc(e.source)}">${esc(IND[e.source].label)}</a> ` +
+    `<span style="color:${c}">—${esc(l || '')}→</span> <a data-id="${esc(e.target)}">${esc(IND[e.target].label)}</a></div>` +
+    `<span class="type" style="background:${c}">${u ? esc(l) + ' · ' + esc(UZ_NAME[l] || '') + ' · ' : ''}swe:${esc(e.rel)}</span>` +
+    `<div class="sum">торкніться назви — деталі поняття</div>`;
+  renderDetail(head, '');
+  detailEl.querySelectorAll('.edge-h a').forEach(a => a.style.cssText = 'color:var(--accent);cursor:pointer');
+}
+let selectedEdge = null;
 function select(id) {
   state.node = id;
+  selectedEdge = null;
   showDetail(id);
   if (nodeById[id]) {
     selected = nodeById[id];
     ensureVisible(selected);
     if (state.view === 'net') centerOn(selected);
-    draw();
-  }
+  } else selected = null;
+  draw();
   highlightTreeRow(id);
   lpmSelect(id);
+  kaSelect(id, null);
   writeHash();
 }
-function unselect() {
-  state.node = null; selected = null;
-  document.getElementById('detail').classList.remove('show');
+function selectEdge(e) {
+  state.node = null; selected = null; selectedEdge = e;
+  showEdgeDetail(e);
   highlightTreeRow(null);
   lpmSelect(null);
+  kaSelect(null, [e.source, e.target]);
+  draw(); writeHash();
+}
+function unselect() {
+  state.node = null; selected = null; selectedEdge = null;
+  detailEl.classList.remove('show', 'expanded');
+  document.body.classList.remove('sheet');
+  highlightTreeRow(null);
+  lpmSelect(null);
+  kaSelect(null, null);
   draw(); writeHash();
 }
 document.getElementById('detail-close').addEventListener('click', unselect);
@@ -466,10 +536,13 @@ const CL_NAME = {'Oп': 'процеси', 'Oо': "об'єкти", 'Oз': 'зад
 const CL_COLOR = {}; Object.values(DATA.clusters).forEach(c => CL_COLOR[c.label] = c.color);
 const CL_ORDER = ['Oп', 'Oо', 'Oз'];
 const KA_ORDER = CL_ORDER.flatMap(c => DATA.ka.filter(k => k.cluster === c));
-let kaFocus = () => {};
+let kaFocus = () => {}, kaSelect = () => {};
 
 (function(){
   const svg = document.getElementById('ka-svg');
+  // закріплений вибір (клік/дотик): після відведення миші підсвітка повертається до нього, а не зникає
+  let pin = [null, null];
+  const kaRestore = () => kaFocus(...pin);
   const NS = 'http://www.w3.org/2000/svg';
   const R = 220, NODE_R = 14, BAND = NODE_R + 5, LABEL_GAP = 7, LINE_H = 13.5, FONT = 11.5;
   const GAP = 1.5;  // проміжок між кластерами, у кроках між вершинами
@@ -530,8 +603,8 @@ let kaFocus = () => {};
     const tt = el('title', {}, hit);
     tt.textContent = `${IND[e.source].label} —${u.letter}→ ${IND[e.target].label}  (${UZ_NAME[u.letter] || ''}, swe:${e.rel})`;
     hit.addEventListener('mouseenter', () => kaFocus(null, [e.source, e.target]));
-    hit.addEventListener('mouseleave', () => kaFocus(null, null));
-    hit.addEventListener('click', () => select(e.source));
+    hit.addEventListener('mouseleave', () => kaRestore());
+    hit.addEventListener('click', () => selectEdge(e));
     const bx = .25 * p0.x + .5 * c.x + .25 * p2.x, by = .25 * p0.y + .5 * c.y + .25 * p2.y;
     const badge = el('g', {class: 'badge'}, badgeLayer);
     badge.dataset.s = e.source; badge.dataset.t = e.target;
@@ -583,7 +656,7 @@ let kaFocus = () => {};
     });
     const tt = el('title', {}, g); tt.textContent = `KA ${k.n}. ${IND[k.id].label} (${k.cluster} · ${CL_NAME[k.cluster]})`;
     g.addEventListener('mouseenter', () => kaFocus(k.id, null));
-    g.addEventListener('mouseleave', () => kaFocus(null, null));
+    g.addEventListener('mouseleave', () => kaRestore());
     g.addEventListener('click', () => select(k.id));
     nodeEls[k.id] = g;
   });
@@ -618,16 +691,18 @@ let kaFocus = () => {};
   tbl.innerHTML = html + '</tbody>';
   tbl.querySelectorAll('td').forEach(td => {
     td.addEventListener('mouseenter', () => kaFocus(null, [td.dataset.s, td.dataset.t]));
-    td.addEventListener('mouseleave', () => kaFocus(null, null));
-    if (td.classList.contains('has')) td.addEventListener('click', () => select(td.dataset.s));
+    td.addEventListener('mouseleave', () => kaRestore());
+    if (td.classList.contains('has')) td.addEventListener('click', () => selectEdge(cell[td.dataset.s + '|' + td.dataset.t]));
   });
   tbl.querySelectorAll('th[data-r],th[data-c]').forEach(th => {
     const id = th.dataset.r || th.dataset.c;
     th.addEventListener('mouseenter', () => kaFocus(id, null));
-    th.addEventListener('mouseleave', () => kaFocus(null, null));
+    th.addEventListener('mouseleave', () => kaRestore());
     th.addEventListener('click', () => select(id));
   });
 
+  kaSelect = (nodeId, pair) => { pin = [nodeEls[nodeId] ? nodeId : null, pair]; kaFocus(...pin); };
+  svg.addEventListener('click', ev => { if (ev.target === svg) unselect(); });
   kaFocus = function(nodeId, pair) {
     const isEdge = pair && cell[pair[0] + '|' + pair[1]];
     svg.classList.toggle('focus', !!(nodeId || isEdge));
@@ -658,7 +733,9 @@ let kaFocus = () => {};
   document.getElementById('ka-clusters').innerHTML = CL_ORDER.map(c =>
     `<span><i class="bandsw" style="background:${CL_COLOR[c]}"></i>${esc(c)} · ${esc(CL_NAME[c])} · ${KA_ORDER.filter(k => k.cluster === c).length}</span>`).join('');
   document.getElementById('ka-kpi').textContent =
-    `${DATA.kaEdges.length} УЗ між ${DATA.ka.length} KA. Наведіть на вершину, ребро чи клітинку — підсвітяться зв'язки й типи УЗ.`;
+    `${DATA.kaEdges.length} УЗ між ${DATA.ka.length} KA. ` + (matchMedia('(hover:none)').matches
+      ? 'Торкніться вершини, ребра чи клітинки — підсвітяться зв\'язки й типи УЗ; торкання фону знімає вибір.'
+      : 'Наведіть на вершину, ребро чи клітинку — підсвітяться зв\'язки й типи УЗ; клік — закріпити й деталі.');
 })();
 
 // ---------- ЛПМ: три шари ----------
@@ -792,6 +869,7 @@ let kaFocus = () => {};
     });
   }
   lpmSelect = id => { sel = pos[id] ? id : null; focus(sel); };
+  svg.addEventListener('click', ev => { if (ev.target === svg) unselect(); });
 
   const byLetter = {}, relOf = {}, pairs = {};
   L.edges.forEach(e => {
@@ -804,7 +882,9 @@ let kaFocus = () => {};
   const P = k => pairs[k] || 0;
   document.getElementById('lpm-kpi').innerHTML =
     `<span>${L.edges.length} УЗ: первинні→базові ${P('0-1')} · базові→KA ${P('1-2')} · первинні→KA ${P('0-2')} · ` +
-    `між базовими ${P('w1')} · між KA ${P('w2')}</span><span style="color:var(--muted)">Наведіть на поняття — підсвітиться ланцюжок до первинних і до KA; клік — деталі й формула</span>`;
+    `між базовими ${P('w1')} · між KA ${P('w2')}</span><span style="color:var(--muted)">${matchMedia('(hover:none)').matches
+      ? 'Торкніться поняття — підсвітиться ланцюжок до первинних і до KA, унизу — формула'
+      : 'Наведіть на поняття — підсвітиться ланцюжок до первинних і до KA; клік — деталі й формула'}</span>`;
 })();
 
 // ---------- перевірки ----------
@@ -982,7 +1062,8 @@ function fit() {
   const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
   const w = canvas.width / dpr(), h = canvas.height / dpr();
   // поля: праворуч і ліворуч — під підписи, згори — під кнопку
-  view.scale = Math.max(0.15, Math.min(2.5, Math.min((w - 220) / (x1 - x0 || 1), (h - 90) / (y1 - y0 || 1))));
+  const mx = w < 500 ? 40 : 220;  // на телефоні підписи з'являються лише після зуму — поля під них не потрібні
+  view.scale = Math.max(0.15, Math.min(2.5, Math.min((w - mx) / (x1 - x0 || 1), (h - 90) / (y1 - y0 || 1))));
   view.ox = -(x0 + x1) / 2 * view.scale * dpr();
   view.oy = (-(y0 + y1) / 2 * view.scale + 10) * dpr();
   draw();
@@ -992,9 +1073,11 @@ document.getElementById('fit').addEventListener('click', fit);
 function centerOn(n) {
   view.scale = Math.max(view.scale, 1.1);
   const wrap = canvas.parentElement.getBoundingClientRect();
-  // зсув ліворуч, щоб вершину не закривала панель деталей
-  const shift = document.getElementById('detail').classList.contains('show') && wrap.width > 700 ? 170 : 0;
-  view.ox = (-n.x * view.scale - shift) * dpr(); view.oy = -n.y * view.scale * dpr();
+  // зсув, щоб вершину не закривала панель деталей: праворуч на ПК, шторка знизу на телефоні
+  const shown = detailEl.classList.contains('show'), narrow = window.innerWidth <= 700;
+  const shift = shown && !narrow ? 170 : 0;
+  const shiftY = shown && narrow ? Math.max(0, wrap.bottom - detailEl.getBoundingClientRect().top) / 2 : 0;
+  view.ox = (-n.x * view.scale - shift) * dpr(); view.oy = (-n.y * view.scale - shiftY) * dpr();
 }
 
 // search
@@ -1077,9 +1160,10 @@ function draw() {
   if (selected) {
     neighbors.add(selected.id);
     visEdges.forEach(e => { if (e.source === selected.id) neighbors.add(e.target); if (e.target === selected.id) neighbors.add(e.source); });
-  }
-  const hot = e => e === hoverEdge || (focusId && (e.source === focusId || e.target === focusId));
-  const dimNode = n => selected && !neighbors.has(n.id);
+  } else if (selectedEdge) { neighbors.add(selectedEdge.source); neighbors.add(selectedEdge.target); }
+  const pinned = selected || selectedEdge;
+  const hot = e => e === hoverEdge || e === selectedEdge || (focusId && (e.source === focusId || e.target === focusId));
+  const dimNode = n => pinned && !neighbors.has(n.id);
   const onScreen = p => p.x > -40 * k && p.x < W + 40 * k && p.y > -40 * k && p.y < H + 40 * k;
   const segs = visEdges.map(e => {
     const a = P[e.source], b = P[e.target];
@@ -1090,7 +1174,7 @@ function draw() {
   segs.forEach(s => {
     if (s.hot) return;
     const uz = !!uzOf(s.e.rel);
-    ctx.globalAlpha = selected ? 0.06 : (uz ? 0.5 : 0.35);
+    ctx.globalAlpha = pinned ? 0.06 : (uz ? 0.5 : 0.35);
     arrow(s.x1, s.y1, s.x2, s.y2, P[s.e.target].r + 2 * k, uz ? relColor(s.e.rel) : MUTED, 1 * k);
   });
   ctx.globalAlpha = 1;
@@ -1122,7 +1206,7 @@ function draw() {
   const hitsNode = (r, own) => circles.some(c => !own.includes(c.n.id) && rectCircle(r, c, 1 * k));
   ctx.font = `600 ${10.5 * k}px ${FONT_FAMILY}`;
   segs.forEach(s => {
-    const show = s.hot || (!selected && view.scale >= 1.0 && s.len >= 110 * k);
+    const show = s.hot || (!pinned && view.scale >= 1.0 && s.len >= 110 * k);
     // на короткому ребрі плашка лягла б на вершини й підписи; тип видно з кольору й підказки
     if (!show || s.len < P[s.e.source].r + P[s.e.target].r + 34 * k) return;
     const uz = uzOf(s.e.rel);
@@ -1156,7 +1240,7 @@ function draw() {
     .filter(p => must(p.n) || KA_NUM[p.n.id] || view.scale >= (p.n.r >= 6 || (degree[p.n.id] || 0) >= 5 ? 0.6 : 1.1))
     .sort((a, b) => prio(a.n) - prio(b.n) || (degree[b.n.id] || 0) - (degree[a.n.id] || 0) || a.n.id.localeCompare(b.n.id));
   placedLabels = []; placedBoxes = boxes;
-  const bgSegs = segs.filter(s => !s.hot && !selected);
+  const bgSegs = segs.filter(s => !s.hot && !pinned);
   const hotSegs = segs.filter(s => s.hot);
   cand.forEach(p => {
     const n = p.n;
@@ -1193,7 +1277,7 @@ function draw() {
     ctx.globalAlpha = 0.8; ctx.lineWidth = 3 * k; ctx.lineJoin = 'round'; ctx.strokeStyle = SURF;
     ctx.strokeText(text, tx, ty);
     ctx.globalAlpha = 1;
-    ctx.fillStyle = (selected && !must(n)) ? INK2 : (KA_NUM[n.id] || must(n) ? INK : INK2);
+    ctx.fillStyle = (pinned && !must(n)) ? INK2 : (KA_NUM[n.id] || must(n) ? INK : INK2);
     ctx.fillText(text, tx, ty);
   });
   ctx.textBaseline = 'alphabetic'; ctx.globalAlpha = 1;
@@ -1212,7 +1296,7 @@ function nodeAt(px, py) {
 }
 function edgeAt(px, py) {
   const [wx, wy] = screenToWorld(px, py);
-  let hit = null, best = 5 / view.scale;
+  let hit = null, best = (matchMedia('(pointer:coarse)').matches ? 12 : 5) / view.scale;
   edges.forEach(e => {
     if (!visibleEdge(e)) return;
     const a = nodeById[e.source], b = nodeById[e.target];
@@ -1232,7 +1316,21 @@ function showTip(px, py, html) {
 
 // pointer interaction (миша й дотик)
 let dragging = null, panStart = null, moved = false;
+const pointers = new Map();  // активні дотики — для масштабування двома пальцями
+let pinch = null;
+function pinchState() {
+  const [a, b] = [...pointers.values()], rect = canvas.getBoundingClientRect();
+  return {d: Math.hypot(a.x - b.x, a.y - b.y) || 1, mx: (a.x + b.x) / 2 - rect.left, my: (a.y + b.y) / 2 - rect.top};
+}
 canvas.addEventListener('pointerdown', ev => {
+  pointers.set(ev.pointerId, {x: ev.clientX, y: ev.clientY});
+  if (pointers.size === 2) {
+    const p = pinchState();
+    pinch = {d0: p.d, s0: view.scale, world: screenToWorld(p.mx, p.my)};
+    dragging = null; panStart = null; moved = true; showTip(0, 0, null);
+    return;
+  }
+  if (pointers.size > 2) return;
   const rect = canvas.getBoundingClientRect();
   const hit = nodeAt(ev.clientX - rect.left, ev.clientY - rect.top);
   moved = false;
@@ -1241,6 +1339,17 @@ canvas.addEventListener('pointerdown', ev => {
   else { panStart = {x: ev.clientX, y: ev.clientY, ox: view.ox, oy: view.oy}; canvas.classList.add('dragging'); }
 });
 canvas.addEventListener('pointermove', ev => {
+  if (pointers.has(ev.pointerId)) pointers.set(ev.pointerId, {x: ev.clientX, y: ev.clientY});
+  if (pinch) {
+    if (pointers.size < 2) return;
+    const p = pinchState();
+    view.scale = Math.max(0.15, Math.min(6, pinch.s0 * p.d / pinch.d0));
+    // точка світу під пальцями лишається під серединою між ними
+    view.ox = p.mx * dpr() - canvas.width / 2 - pinch.world[0] * view.scale * dpr();
+    view.oy = p.my * dpr() - canvas.height / 2 - pinch.world[1] * view.scale * dpr();
+    draw();
+    return;
+  }
   const rect = canvas.getBoundingClientRect();
   const px = ev.clientX - rect.left, py = ev.clientY - rect.top;
   if (dragging) {
@@ -1266,11 +1375,21 @@ canvas.addEventListener('pointermove', ev => {
   }
 });
 canvas.addEventListener('pointerleave', () => { hoverNode = hoverEdge = null; showTip(0, 0, null); draw(); });
-canvas.addEventListener('pointerup', () => {
-  if (dragging && !moved) select(dragging.id);
-  else if (panStart && !moved) unselect();
+function pointerEnd(ev) {
+  pointers.delete(ev.pointerId);
+  if (pinch) { if (!pointers.size) pinch = null; return; }
+  if (ev.type === 'pointerup' && !moved) {
+    const rect = canvas.getBoundingClientRect();
+    if (dragging) select(dragging.id);
+    else if (panStart) {
+      const e = edgeAt(ev.clientX - rect.left, ev.clientY - rect.top);
+      e ? selectEdge(e) : unselect();
+    }
+  }
   dragging = null; panStart = null; canvas.classList.remove('dragging');
-});
+}
+canvas.addEventListener('pointerup', pointerEnd);
+canvas.addEventListener('pointercancel', pointerEnd);
 canvas.addEventListener('wheel', ev => {
   ev.preventDefault();
   const rect = canvas.getBoundingClientRect();
@@ -1282,6 +1401,12 @@ canvas.addEventListener('wheel', ev => {
   view.oy += (after[1] - before[1]) * view.scale * dpr();
   draw();
 }, {passive: false});
+
+// на ПК фільтри завжди розгорнуті, на телефоні — згорнуті під «Фільтри», щоб не займати пів екрана
+const narrowMQ = matchMedia('(max-width:700px)');
+const syncFilters = () => { document.getElementById('filters').open = !narrowMQ.matches; };
+syncFilters(); narrowMQ.addEventListener('change', () => { syncFilters(); resizeCanvas(); });
+document.getElementById('filters').addEventListener('toggle', () => requestAnimationFrame(resizeCanvas));
 
 // ---------- init ----------
 readHash();
