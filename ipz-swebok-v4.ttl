@@ -1,4 +1,4 @@
-@prefix swe:  <http://kai.edu.ua/ontology/ipz-swebok-v4#> .
+@prefix swe:  <https://vsevolod-ost.github.io/swebok-ontology-viz/ipz-swebok-v4.ttl#> .
 @prefix owl:  <http://www.w3.org/2002/07/owl#> .
 @prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
@@ -11,7 +11,7 @@
 # Згенеровано скриптом ontology/generate_ttl.py з ontology/data.py.
 #################################################################
 
-<http://kai.edu.ua/ontology/ipz-swebok-v4> a owl:Ontology ;
+<https://vsevolod-ost.github.io/swebok-ontology-viz/ipz-swebok-v4.ttl> a owl:Ontology ;
     rdfs:label "Системна онтологія ІПЗ на основі SWEBOK Guide v4.0"@uk ;
     rdfs:comment "Онтологія O = (X, R, F, A): X — класи та індивіди; R — об'єктні властивості (УЗ ЛПМ); F — анотації rdfs:label/rdfs:comment/rdfs:seeAlso; A — аксіоми. В OWL виражено: A1 (диз'юнктність складових Ос, функціональність belongsTo, еквівалентність класів KA обмеженням belongsTo), A2 (транзитивність а, х). A3 (ациклічність) і A6 (деревоподібність) перевіряє ontology/check.py: OWL 2 DL забороняє асиметричність і обмеження кардинальності на транзитивних властивостях."@uk ;
     dct:source "Guide to the Software Engineering Body of Knowledge, Version 4.0 / ed. H. Washizaki. IEEE Computer Society, 2024."@en ;
