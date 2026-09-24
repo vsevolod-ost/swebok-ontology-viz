@@ -1,0 +1,1292 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Онтологія ІПЗ — візуалізація</title>
+<style>
+:root{
+  --ink:#1f2328; --ink2:#57606a; --muted:#8c959f; --grid:#d8dde3; --surface:#ffffff;
+  --panel:#f6f7f9; --accent:#2f6db0; --shadow:rgba(0,0,0,.08); --edge:rgba(31,35,40,.18);
+  --dim:rgba(31,35,40,.05); --band-op:.16;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#e6e8eb; --ink2:#b1b8c0; --muted:#7d8590; --grid:#30363d; --surface:#0f1216;
+    --panel:#161b22; --accent:#6ea8f0; --shadow:rgba(0,0,0,.5); --edge:rgba(230,232,235,.2);
+    --dim:rgba(230,232,235,.06); --band-op:.3;
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#e6e8eb; --ink2:#b1b8c0; --muted:#7d8590; --grid:#30363d; --surface:#0f1216;
+  --panel:#161b22; --accent:#6ea8f0; --shadow:rgba(0,0,0,.5); --edge:rgba(230,232,235,.2);
+  --dim:rgba(230,232,235,.06); --band-op:.3;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--surface);color:var(--ink);
+  font:14px/1.4 -apple-system,Segoe UI,Roboto,"Noto Sans",Helvetica,Arial,sans-serif}
+body{display:flex;flex-direction:column}
+header{padding:12px 24px 4px;display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+header h1{font-size:16px;margin:0}
+header .stats{color:var(--muted);font-size:12px}
+nav{display:flex;gap:2px;padding:0 12px;flex-wrap:wrap;border-bottom:1px solid var(--grid)}
+nav button{border:none;border-bottom:2px solid transparent;background:none;color:var(--ink2);
+  padding:10px 12px 8px;cursor:pointer;font-size:13px;font-family:inherit}
+nav button:hover{color:var(--ink)}
+nav button.active{color:var(--ink);font-weight:600;border-bottom-color:var(--accent)}
+main{position:relative;flex:1 1 auto;min-height:0}
+.view{display:none;height:100%}
+.view.active{display:flex}
+button.small{border:1px solid var(--grid);background:var(--panel);color:var(--ink2);border-radius:5px;
+  padding:3px 9px;font-size:12px;cursor:pointer}
+button.small:hover{color:var(--ink)}
+/* trees */
+.tree-view{overflow:auto;padding:12px 20px;width:100%}
+.toolbar{display:flex;gap:6px;margin-bottom:10px;align-items:center;flex-wrap:wrap}
+.toolbar .note{color:var(--muted);font-size:12px}
+.tree ul{list-style:none;margin:0;padding-left:20px;border-left:1px dotted var(--grid)}
+.tree > ul{border-left:none;padding-left:0}
+.tree li{margin:2px 0}
+.node-row{display:inline-flex;align-items:center;gap:6px;padding:2px 6px;border-radius:4px;cursor:pointer;flex-wrap:wrap}
+.node-row:hover,.node-row.sel{background:var(--panel)}
+.node-row.sel{outline:1px solid var(--accent)}
+.node-row .toggle{width:16px;color:var(--muted);font-size:11px;text-align:center;user-select:none}
+.node-row .tag{font-size:10px;color:var(--muted);border:1px solid var(--grid);border-radius:3px;padding:0 4px}
+.node-row .src{font-size:10.5px;color:var(--accent);white-space:nowrap}
+.node-row .cnt{font-size:11px;color:var(--muted)}
+.node-row .en{color:var(--muted);font-size:12px}
+li.collapsed > ul{display:none}
+/* KA view */
+.ka-view{width:100%;overflow:auto;padding:18px 24px;display:flex;gap:32px;flex-wrap:wrap;align-content:flex-start;justify-content:center}
+.ka-view .col{flex:1 1 520px;min-width:0;max-width:820px}
+.ka-view .col.m{flex:0 1 auto}
+.ka-view h3{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 10px;font-weight:600}
+.legend-row{display:flex;gap:6px 18px;flex-wrap:wrap;font-size:12.5px;color:var(--ink2);margin-bottom:6px}
+.legend-row span{display:inline-flex;align-items:center;gap:6px;cursor:default}
+.legend-row i{display:inline-block;width:18px;height:3px;border-radius:2px}
+.legend-row i.bandsw{height:12px;width:22px;border-radius:6px;opacity:var(--band-op)}
+.legend-row b{font-weight:700}
+#ka-svg{width:100%;height:auto;max-width:780px;display:block;margin:6px auto 0;overflow:visible}
+#ka-svg .band{fill:none;stroke-linecap:round;stroke-opacity:var(--band-op)}
+#ka-svg .kanode{cursor:pointer;transition:opacity .15s}
+#ka-svg .kanode circle{fill:var(--surface);stroke-width:1.8}
+#ka-svg .kanode .num{font-weight:700;font-size:11px;fill:var(--ink)}
+#ka-svg .kanode .lab{font-size:11.5px;fill:var(--ink2)}
+#ka-svg .kanode.hl .lab{fill:var(--ink);font-weight:600}
+#ka-svg .kanode.hl circle{stroke-width:3}
+#ka-svg .kaedge .vis{fill:none;stroke-width:1.5;opacity:.55;transition:opacity .15s}
+#ka-svg .kaedge .hit{fill:none;stroke:transparent;stroke-width:10;pointer-events:stroke;cursor:pointer}
+#ka-svg .badge{display:none;pointer-events:none}
+#ka-svg .badge.hl{display:inline}
+#ka-svg .badge circle{fill:var(--surface);stroke-width:1.4}
+#ka-svg .badge text{font-size:10.5px;font-weight:700;text-anchor:middle;dominant-baseline:central}
+#ka-svg.focus .kaedge .vis{opacity:.07}
+#ka-svg.focus .kaedge.hl .vis{opacity:1;stroke-width:2.4}
+#ka-svg.focus .kanode{opacity:.3}
+#ka-svg.focus .kanode.hl{opacity:1}
+table.matrix{border-collapse:collapse;font-size:11.5px;font-variant-numeric:tabular-nums}
+table.matrix th,table.matrix td{width:25px;min-width:25px;height:23px;text-align:center;border:1px solid var(--grid);padding:0}
+table.matrix th{color:var(--ink2);font-weight:600;background:var(--panel);cursor:pointer}
+table.matrix th.rh{border-left-width:3px}
+table.matrix th.cl{font-size:10.5px;font-weight:700;background:none;border:none;border-bottom:3px solid;cursor:default;
+  white-space:nowrap;height:20px;letter-spacing:.02em}
+table.matrix th.corner{background:none;border:none;font-weight:400;color:var(--muted);font-size:10px;cursor:default;white-space:nowrap;padding:0 4px}
+table.matrix td{font-weight:700}
+table.matrix td.has{cursor:pointer}
+table.matrix td.self{background:var(--panel)}
+table.matrix .sl{border-left:2px solid var(--ink2)}
+table.matrix .st{border-top:2px solid var(--ink2)}
+table.matrix td.cross{background:var(--dim)}
+table.matrix th.cross{background:var(--grid);color:var(--ink)}
+table.matrix td.hl{box-shadow:inset 0 0 0 2px var(--ink)}
+.matrix-wrap{overflow:auto;padding-bottom:4px}
+.kpi{font-size:12.5px;color:var(--ink2);margin-top:10px;max-width:480px}
+/* LPM layers */
+.lpm-view{width:100%;overflow:auto;padding:18px 24px}
+.lpm-view h3{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 10px;font-weight:600}
+#lpm-svg{width:100%;max-width:1180px;height:auto;display:block;margin:4px auto 0;overflow:visible}
+#lpm-svg .lnode{cursor:pointer;transition:opacity .15s}
+#lpm-svg .lnode rect{fill:var(--surface);stroke-width:1.4}
+#lpm-svg .lnode text{font-size:11.5px;fill:var(--ink);dominant-baseline:central}
+#lpm-svg .lnode .sym{font-weight:700}
+#lpm-svg .lnode.hl rect{stroke-width:2.6}
+#lpm-svg .ledge{fill:none;stroke-width:1.2;opacity:.35;transition:opacity .15s}
+#lpm-svg .colhead{font-size:12px;font-weight:600;fill:var(--ink2);text-anchor:middle}
+#lpm-svg .colsub{font-size:10.5px;fill:var(--muted);text-anchor:middle}
+#lpm-svg.focus .ledge{opacity:.04}
+#lpm-svg.focus .ledge.hl{opacity:1;stroke-width:2}
+#lpm-svg.focus .lnode{opacity:.25}
+#lpm-svg.focus .lnode.hl{opacity:1}
+/* checks */
+.chk-view{width:100%;overflow:auto;padding:18px 24px}
+.chk-inner{max-width:980px;margin:0 auto}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin-bottom:18px}
+.tile{background:var(--panel);border:1px solid var(--grid);border-radius:8px;padding:10px 14px}
+.tile .v{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums}
+.tile .l{font-size:12px;color:var(--ink2)}
+table.chk{border-collapse:collapse;width:100%;font-size:13px}
+table.chk td{border-top:1px solid var(--grid);padding:7px 8px;vertical-align:top}
+table.chk td.g{color:var(--muted);font-size:11px;text-transform:uppercase;white-space:nowrap;width:60px}
+table.chk td.st{width:58px}
+table.chk td.d{color:var(--ink2);font-size:12.5px}
+.chip{display:inline-block;font-size:10.5px;font-weight:700;border-radius:4px;padding:1px 7px;color:#fff}
+.chip.ok{background:#1a7f37}.chip.fail{background:#cf222e}.chip.skip{background:var(--muted)}
+.chk-note{color:var(--muted);font-size:12px;margin-top:12px}
+/* network */
+.net-wrap{display:flex;width:100%;height:100%}
+.net-side{width:260px;flex:0 0 260px;border-right:1px solid var(--grid);padding:10px 12px;overflow:auto;background:var(--panel)}
+.net-side h3{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:14px 0 6px;
+  display:flex;justify-content:space-between;align-items:center}
+.net-side h3:first-child{margin-top:0}
+.net-side h3 .btns{display:flex;gap:4px;text-transform:none;letter-spacing:0}
+.net-side h3 .btns button{padding:1px 6px;font-size:11px}
+.net-side label{display:flex;align-items:center;gap:6px;font-size:12.5px;padding:2px 0;cursor:pointer}
+.net-side label .n{color:var(--muted);margin-left:auto;font-size:11px}
+.net-side input[type=search]{width:100%;padding:6px 8px;border:1px solid var(--grid);border-radius:5px;font-size:13px;
+  background:var(--surface);color:var(--ink)}
+.net-side .searchinfo{font-size:11px;color:var(--muted);min-height:15px;margin-top:3px}
+.net-side .swatch{width:10px;height:10px;border-radius:50%;flex:0 0 auto}
+.net-side .lineswatch{width:16px;height:3px;flex:0 0 auto;border-radius:2px}
+.net-side .letter{font-weight:700;width:12px;text-align:center}
+.net-side .swatch.ring{background:none;border:1.5px dashed var(--muted)}
+.net-side .extra{margin-top:4px;padding-top:4px;border-top:1px dashed var(--grid)}
+.tip .muted{color:var(--muted);font-size:11px}
+.net-canvas-wrap{position:relative;flex:1 1 auto;min-width:0}
+canvas{width:100%;height:100%;display:block;cursor:grab;touch-action:none}
+canvas.dragging{cursor:grabbing}
+.canvas-tools{position:absolute;top:10px;left:10px;display:flex;gap:6px}
+.tip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--grid);border-radius:5px;
+  padding:3px 8px;font-size:12px;box-shadow:0 2px 8px var(--shadow);display:none;white-space:nowrap;z-index:5}
+.hint{position:absolute;bottom:10px;left:10px;font-size:11px;color:var(--muted);background:var(--panel);padding:3px 8px;border-radius:5px;opacity:.9}
+/* detail panel (shared by all tabs) */
+.detail{position:absolute;top:10px;right:10px;width:320px;max-width:calc(100% - 20px);max-height:calc(100% - 20px);
+  overflow:auto;background:var(--surface);border:1px solid var(--grid);border-radius:8px;
+  padding:12px 14px;box-shadow:0 4px 18px var(--shadow);display:none;z-index:10}
+.detail.show{display:block}
+.detail h2{font-size:14px;margin:0 22px 2px 0}
+.detail .en{color:var(--muted);font-size:12px;margin-bottom:8px}
+.detail .type{display:inline-block;font-size:10px;color:#fff;background:var(--accent);
+  border-radius:3px;padding:1px 6px;margin-bottom:6px}
+.detail dt{font-size:10px;text-transform:uppercase;color:var(--muted);margin-top:8px}
+.detail dd{margin:2px 0 0;font-size:12.5px}
+.detail .close{position:absolute;top:8px;right:10px;cursor:pointer;color:var(--muted);font-size:18px;border:none;background:none}
+.detail .rel-list a{display:block;font-size:12px;padding:2px 0;color:var(--accent);cursor:pointer;text-decoration:none}
+.detail .rel-list a:hover{text-decoration:underline}
+.detail .rel-list b{display:inline-block;width:14px;text-align:center}
+footer{padding:4px 16px;color:var(--muted);font-size:11px;border-top:1px solid var(--grid)}
+@media (max-width:700px){
+  .net-wrap{flex-direction:column}
+  .net-side{width:auto;flex:0 0 auto;max-height:40%;border-right:none;border-bottom:1px solid var(--grid)}
+  .net-canvas-wrap{flex:1 1 auto;min-height:320px}
+  .tree-view,.ka-view,.lpm-view,.chk-view{padding:10px 16px}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title">Онтологія ІПЗ</h1>
+  <span class="stats" id="stats"></span>
+</header>
+<nav>
+  <button data-view="ka">18 KA: зв'язки</button>
+  <button data-view="lpm">ЛПМ: 3 шари</button>
+  <button data-view="classes">Класи (таксономія)</button>
+  <button data-view="ka6">Декомпозиція KA 6</button>
+  <button data-view="net">Мережа індивідів</button>
+  <button data-view="checks">Перевірки</button>
+</nav>
+<main>
+  <section class="view" id="view-ka">
+    <div class="ka-view">
+      <div class="col">
+        <h3>Уніфіковані зв'язки між областями знань</h3>
+        <div class="legend-row" id="ka-legend"></div>
+        <div class="legend-row" id="ka-clusters"></div>
+        <svg id="ka-svg" role="img" aria-label="Кругова схема УЗ між 18 KA"></svg>
+      </div>
+      <div class="col m">
+        <h3>Матриця УЗ (рядок → стовпець)</h3>
+        <div class="matrix-wrap"><table class="matrix" id="ka-matrix"></table></div>
+        <div class="kpi" id="ka-kpi"></div>
+      </div>
+    </div>
+  </section>
+  <section class="view" id="view-lpm"><div class="lpm-view">
+    <h3>Логіко-понятійна модель: первинні → базові → похідні поняття (KA)</h3>
+    <div class="legend-row" id="lpm-legend"></div>
+    <div class="legend-row" id="lpm-kpi"></div>
+    <svg id="lpm-svg" role="img" aria-label="Три шари ЛПМ і уніфіковані зв'язки між ними"></svg>
+  </div></section>
+  <section class="view" id="view-checks"><div class="chk-view"><div class="chk-inner">
+    <div class="tiles" id="chk-tiles"></div>
+    <table class="chk" id="chk-table"></table>
+    <div class="chk-note">Усі перевірки обчислено з ontology/ipz-swebok-v4.ttl під час генерації сторінки (ontology/visualize.py),
+      незалежно від ontology/check.py, який перевіряє вихідні дані ontology/data.py.</div>
+  </div></div></section>
+  <section class="view" id="view-classes"><div class="tree-view">
+    <div class="toolbar"><button class="small" data-expand="tree-classes">Розгорнути все</button>
+      <button class="small" data-collapse="tree-classes">Згорнути все</button>
+      <span class="note">у дужках — кількість індивідів класу</span></div>
+    <div class="tree" id="tree-classes"></div></div></section>
+  <section class="view" id="view-ka6"><div class="tree-view">
+    <div class="toolbar"><button class="small" data-expand="tree-ka6">Розгорнути все</button>
+      <button class="small" data-collapse="tree-ka6">Згорнути все</button>
+      <span class="note">праворуч — розділ і сторінка SWEBOK v4.0; клік — вхід/вихід/механізм</span></div>
+    <div class="tree" id="tree-ka6"></div></div></section>
+  <section class="view" id="view-net">
+    <div class="net-wrap">
+      <div class="net-side">
+        <input type="search" id="search" placeholder="Пошук за назвою або ID…">
+        <div class="searchinfo" id="searchinfo"></div>
+        <h3>Групи індивідів <span class="btns"><button class="small" data-all="group">усі</button><button class="small" data-none="group">жодної</button></span></h3>
+        <div id="group-filters"></div>
+        <div id="extra-filters" class="extra"></div>
+        <h3>Типи зв'язків <span class="btns"><button class="small" data-all="rel">усі</button><button class="small" data-none="rel">жодного</button></span></h3>
+        <div id="rel-filters"></div>
+      </div>
+      <div class="net-canvas-wrap">
+        <canvas id="canvas"></canvas>
+        <div class="canvas-tools"><button class="small" id="fit">Вписати в екран</button></div>
+        <div class="tip" id="tip"></div>
+        <div class="hint">Колесо — зум · фон — панорама · клік по вузлу — деталі й кольорові УЗ · Enter у пошуку — до збігу</div>
+      </div>
+    </div>
+  </section>
+  <div class="detail" id="detail">
+    <button class="close" id="detail-close" aria-label="Закрити">&times;</button>
+    <div id="detail-body"></div>
+  </div>
+</main>
+<footer id="footer"></footer>
+<script>
+const DATA = {"checks": [{"detail": "HermiT: онтологія несуперечлива, незадовольних класів немає", "group": "OWL", "ok": true, "title": "Логічна несуперечливість OWL 2 (резонер HermiT)"}, {"detail": "усі значення — рядки без мовного тегу", "group": "OWL", "ok": true, "title": "Діапазон xsd:string для swebokSection / swebokPage"}, {"detail": "18 KA: Oп — 10, Oо — 6, Oз — 2", "group": "Ос", "ok": true, "title": "18 KA, розбиття Oп ∪ Oо ∪ Oз (A1)"}, {"detail": "18 × 1", "group": "Ос", "ok": true, "title": "Кожна KA належить рівно одній складовій Ос (belongsTo)"}, {"detail": "18 + 18 + 18 = 54 понять, висячих немає", "group": "ЛПМ", "ok": true, "title": "Поняття всіх трьох шарів ЛПМ пов'язані УЗ (A5)"}, {"detail": "145 ребер; циклів немає", "group": "ЛПМ", "ok": true, "title": "Ациклічність «а» (isPartOf) (A3)"}, {"detail": "30 ребер; циклів немає", "group": "ЛПМ", "ok": true, "title": "Ациклічність «х» (isKindOf) (A3)"}, {"detail": "15 ребер; циклів немає", "group": "ЛПМ", "ok": true, "title": "Ациклічність «к» (hasInstance) (A3)"}, {"detail": "224 пар, дублів немає", "group": "ЛПМ", "ok": true, "title": "Жодна пара понять не пов'язана двома бінарними УЗ"}, {"detail": "к — 15, х — 30, а — 145, о — 34, s — 21; службові: appliesTo — 7, belongsTo — 22, hasEnvironmentFrom — 1, hasInputFrom — 2, hasMechanismFrom — 1, usedIn — 9", "group": "ЛПМ", "ok": true, "title": "Лише 5 типів УЗ ЛПМ (о, а, х, к, s) + службові зв'язки"}, {"detail": "3 підпроцесів, 16 дій, 59 операцій, 4 наскрізних дій", "group": "KA 6", "ok": true, "title": "Деревоподібність декомпозиції KA 6: рівно один батько (A6)"}, {"detail": "82 з 82", "group": "KA 6", "ok": true, "title": "Кожен елемент декомпозиції має § і сторінку SWEBOK"}], "classes": {"Action": {"comment": null, "id": "Action", "label": "Дія", "label_en": null, "parents": ["Process"]}, "ActivityProcess": {"comment": null, "id": "ActivityProcess", "label": "Процес діяльності", "label_en": null, "parents": ["Process"]}, "BasicConcept": {"comment": "Утворене з первинних через УЗ — базовий шар ЛПМ.", "id": "BasicConcept", "label": "Базове поняття ПрО ІПЗ", "label_en": null, "parents": ["Concept"]}, "Concept": {"comment": "Елемент множини X онтології O = (X, R, F, A) (лекція 2, сл. 14).", "id": "Concept", "label": "Концепт ПрО ІПЗ", "label_en": null, "parents": []}, "DerivedConcept": {"comment": "Утворене з базових/первинних через УЗ — шар похідних понять ЛПМ.", "id": "DerivedConcept", "label": "Похідне поняття", "label_en": null, "parents": ["Concept"]}, "FundamentalAction": {"comment": "Дія з розділу Fundamentals, яка використовується у кількох підпроцесах (аксіома A6).", "id": "FundamentalAction", "label": "Наскрізна базова дія", "label_en": null, "parents": ["Action"]}, "KnowledgeArea": {"comment": "Ідентифікована область інженерії ПЗ, що визначається вимогами до знань і описується у термінах складових процесів, практик, входів, виходів, інструментів і технік (SWEBOK v4.0, с. xxv).", "id": "KnowledgeArea", "label": "Область знань SWEBOK (Knowledge Area)", "label_en": null, "parents": ["DerivedConcept"]}, "ObjectKA": {"comment": null, "id": "ObjectKA", "label": "Об'єктна область знань (член Oо)", "label_en": null, "parents": ["KnowledgeArea"]}, "ObjectOntology": {"comment": "Ієрархічна структура класів, підкласів та елементів класів понять, на які посилаються Oп і Oз.", "id": "ObjectOntology", "label": "Онтологія об'єктів Oо", "label_en": null, "parents": ["SystemOntologyComponent"]}, "Operation": {"comment": null, "id": "Operation", "label": "Операція", "label_en": null, "parents": ["Process"]}, "PracticalConsideration": {"comment": null, "id": "PracticalConsideration", "label": "Практичне міркування (модифікатор процесу)", "label_en": null, "parents": ["Concept"]}, "PrimaryConcept": {"comment": "Поняття суміжних ПрО — аксіоматичний шар ЛПМ (лекція 2, сл. 21–22).", "id": "PrimaryConcept", "label": "Первинне (аксіоматичне) поняття", "label_en": null, "parents": ["Concept"]}, "Process": {"comment": "Фіксовані в часі зміни станів виокремленої сукупності сутностей (лекція 3, сл. 6, 8).", "id": "Process", "label": "Процес", "label_en": null, "parents": ["Concept"]}, "ProcessKA": {"comment": null, "id": "ProcessKA", "label": "Процесна область знань (член Oп)", "label_en": null, "parents": ["KnowledgeArea"]}, "ProcessOntology": {"comment": "Ієрархічна структура процесів, підпроцесів, дій і операцій (лекція 2, сл. 15).", "id": "ProcessOntology", "label": "Онтологія процесів Oп", "label_en": null, "parents": ["SystemOntologyComponent"]}, "ProductionProcess": {"comment": null, "id": "ProductionProcess", "label": "Продуктовий виробничий процес", "label_en": null, "parents": ["PurposefulProcess"]}, "ProjectProcess": {"comment": null, "id": "ProjectProcess", "label": "Процес-проєкт", "label_en": null, "parents": ["ProductionProcess"]}, "PurposefulProcess": {"comment": null, "id": "PurposefulProcess", "label": "Доцільний процес діяльності", "label_en": null, "parents": ["ActivityProcess"]}, "SoftwareEngineeringProcess": {"comment": "Продуктовий процес, об'єктом діяльності якого є програмні продукти (лекція 3, сл. 6, 10). Операційні процеси мають сервісний, а не проєктний характер (SWEBOK v4.0, с. 6-6), тому клас підпорядковано ProductionProcess.", "id": "SoftwareEngineeringProcess", "label": "Процес програмної інженерії (процес ПІ)", "label_en": null, "parents": ["ProductionProcess"]}, "SubProcess": {"comment": null, "id": "SubProcess", "label": "Підпроцес", "label_en": null, "parents": ["Process"]}, "SystemOntologyComponent": {"comment": null, "id": "SystemOntologyComponent", "label": "Складова системної онтології", "label_en": null, "parents": []}, "SystemicUnion": {"comment": "Нове поняття С, яке не є простою сумою складових понять (лекція 2, сл. 27, УЗ типу s).", "id": "SystemicUnion", "label": "Системологічне поєднання", "label_en": null, "parents": ["DerivedConcept"]}, "TaskKA": {"comment": null, "id": "TaskKA", "label": "Задачна область знань (член Oз)", "label_en": null, "parents": ["KnowledgeArea"]}, "TaskOntology": {"comment": "Ієрархічна структура задач, підзадач, процедур і операторів.", "id": "TaskOntology", "label": "Онтологія задач Oз", "label_en": null, "parents": ["SystemOntologyComponent"]}, "Tool": {"comment": null, "id": "Tool", "label": "Інструментальний засіб (механізм процесу, член Oо)", "label_en": null, "parents": ["Concept"]}}, "clusters": {"ObjectKA": {"color": "#2f6db0", "label": "Oо"}, "ProcessKA": {"color": "#d0602a", "label": "Oп"}, "TaskKA": {"color": "#119a78", "label": "Oз"}}, "edges": [{"rel": "isKindOf", "source": "B_Af", "target": "P_M"}, {"rel": "isKindOf", "source": "B_Af", "target": "P_d"}, {"rel": "isPartOf", "source": "B_Af", "target": "B_Cfg"}, {"rel": "isPartOf", "source": "B_Af", "target": "KA1"}, {"rel": "isPartOf", "source": "B_Af", "target": "KA2"}, {"rel": "isPartOf", "source": "B_Af", "target": "KA3"}, {"rel": "isPartOf", "source": "B_Af", "target": "KA4"}, {"rel": "isPartOf", "source": "B_Af", "target": "KA5"}, {"rel": "isPartOf", "source": "B_Af", "target": "KA8"}, {"rel": "isPartOf", "source": "B_Cfg", "target": "KA6"}, {"rel": "isPartOf", "source": "B_Cfg", "target": "KA8"}, {"rel": "isPartOf", "source": "B_Ef", "target": "KA15"}, {"rel": "isPropertyOf", "source": "B_Ef", "target": "B_PI"}, {"rel": "isKindOf", "source": "B_Eng", "target": "P_H"}, {"rel": "isPartOf", "source": "B_Eng", "target": "KA9"}, {"rel": "isPropertyOf", "source": "B_Eng", "target": "KA14"}, {"rel": "isPartOf", "source": "B_LC", "target": "KA10"}, {"rel": "isKindOf", "source": "B_Mt", "target": "P_M"}, {"rel": "isPartOf", "source": "B_Mt", "target": "B_PI"}, {"rel": "isPartOf", "source": "B_Mt", "target": "KA2"}, {"rel": "isPartOf", "source": "B_Mt", "target": "KA3"}, {"rel": "isPartOf", "source": "B_Mt", "target": "KA5"}, {"rel": "isKindOf", "source": "B_OE", "target": "P_c"}, {"rel": "isPartOf", "source": "B_OE", "target": "KA16"}, {"rel": "isPartOf", "source": "B_OE", "target": "KA6"}, {"rel": "isKindOf", "source": "B_PI", "target": "P_Pr"}, {"rel": "isPartOf", "source": "B_PI", "target": "B_LC"}, {"rel": "isPropertyOf", "source": "B_PI", "target": "B_Eng"}, {"rel": "isKindOf", "source": "B_Pj", "target": "B_PI"}, {"rel": "isPartOf", "source": "B_Pj", "target": "KA9"}, {"rel": "isPropertyOf", "source": "B_Q", "target": "B_SP"}, {"rel": "isPropertyOf", "source": "B_Q", "target": "KA1"}, {"rel": "isPropertyOf", "source": "B_Q", "target": "KA3"}, {"rel": "isPropertyOf", "source": "B_Q", "target": "KA4"}, {"rel": "isPropertyOf", "source": "B_Q", "target": "KA5"}, {"rel": "isPropertyOf", "source": "B_Q", "target": "KA6"}, {"rel": "isPartOf", "source": "B_Rq", "target": "KA1"}, {"rel": "isPartOf", "source": "B_Rq", "target": "KA3"}, {"rel": "isPartOf", "source": "B_Rq", "target": "KA7"}, {"rel": "isPropertyOf", "source": "B_Rq", "target": "B_Q"}, {"rel": "isPropertyOf", "source": "B_Rq", "target": "B_SP"}, {"rel": "isPropertyOf", "source": "B_Rq", "target": "B_Std"}, {"rel": "isKindOf", "source": "B_SH", "target": "P_H"}, {"rel": "isPartOf", "source": "B_SH", "target": "KA1"}, {"rel": "isPartOf", "source": "B_SH", "target": "KA2"}, {"rel": "isPropertyOf", "source": "B_SH", "target": "B_Rq"}, {"rel": "isKindOf", "source": "B_SP", "target": "B_SW"}, {"rel": "isPartOf", "source": "B_SP", "target": "KA7"}, {"rel": "isPropertyOf", "source": "B_SP", "target": "B_PI"}, {"rel": "isKindOf", "source": "B_SW", "target": "P_S"}, {"rel": "isPartOf", "source": "B_SW", "target": "B_Cfg"}, {"rel": "isPartOf", "source": "B_SW", "target": "B_OE"}, {"rel": "isKindOf", "source": "B_Sec", "target": "B_Q"}, {"rel": "isPropertyOf", "source": "B_Sec", "target": "KA3"}, {"rel": "isPropertyOf", "source": "B_Sec", "target": "KA5"}, {"rel": "isPropertyOf", "source": "B_Sec", "target": "KA6"}, {"rel": "isKindOf", "source": "B_Std", "target": "P_I"}, {"rel": "isPartOf", "source": "B_Std", "target": "KA10"}, {"rel": "isPartOf", "source": "B_Std", "target": "KA14"}, {"rel": "isPartOf", "source": "B_Std", "target": "KA18"}, {"rel": "isPartOf", "source": "B_Std", "target": "KA4"}, {"rel": "isPartOf", "source": "B_Sv", "target": "KA6"}, {"rel": "isPartOf", "source": "B_Sv", "target": "KA7"}, {"rel": "systemicUnionOf", "source": "B_Sv", "target": "B_OE"}, {"rel": "systemicUnionOf", "source": "B_Sv", "target": "B_Q"}, {"rel": "systemicUnionOf", "source": "B_Sv", "target": "B_SP"}, {"rel": "isKindOf", "source": "B_T", "target": "B_SW"}, {"rel": "isPartOf", "source": "B_T", "target": "B_PI"}, {"rel": "isPartOf", "source": "B_T", "target": "KA4"}, {"rel": "isPartOf", "source": "B_T", "target": "KA5"}, {"rel": "isPartOf", "source": "B_T", "target": "KA6"}, {"rel": "isPartOf", "source": "B_T", "target": "KA8"}, {"rel": "appliesTo", "source": "C6_1", "target": "P6_3"}, {"rel": "appliesTo", "source": "C6_2", "target": "P6_1"}, {"rel": "appliesTo", "source": "C6_2", "target": "P6_3"}, {"rel": "appliesTo", "source": "C6_3", "target": "P6_1"}, {"rel": "appliesTo", "source": "C6_3", "target": "P6_2"}, {"rel": "appliesTo", "source": "C6_3", "target": "P6_3"}, {"rel": "appliesTo", "source": "C6_4", "target": "KA6"}, {"rel": "isPartOf", "source": "F6_3", "target": "KA6"}, {"rel": "usedIn", "source": "F6_3", "target": "P6_2_2"}, {"rel": "isPartOf", "source": "F6_4", "target": "KA6"}, {"rel": "usedIn", "source": "F6_4", "target": "P6_1_3"}, {"rel": "usedIn", "source": "F6_4", "target": "P6_2_2"}, {"rel": "usedIn", "source": "F6_4", "target": "P6_3_1"}, {"rel": "isPartOf", "source": "F6_5", "target": "KA6"}, {"rel": "usedIn", "source": "F6_5", "target": "P6_2_1"}, {"rel": "usedIn", "source": "F6_5", "target": "P6_2_5"}, {"rel": "usedIn", "source": "F6_5", "target": "P6_3_1"}, {"rel": "isPartOf", "source": "F6_6", "target": "KA6"}, {"rel": "usedIn", "source": "F6_6", "target": "P6_1_4"}, {"rel": "usedIn", "source": "F6_6", "target": "P6_1_5"}, {"rel": "belongsTo", "source": "KA1", "target": "ProcessOntologyOfIPZ"}, {"rel": "isKindOf", "source": "KA1", "target": "B_PI"}, {"rel": "belongsTo", "source": "KA10", "target": "ProcessOntologyOfIPZ"}, {"rel": "hasInstance", "source": "KA10", "target": "KA1"}, {"rel": "hasInstance", "source": "KA10", "target": "KA2"}, {"rel": "hasInstance", "source": "KA10", "target": "KA3"}, {"rel": "hasInstance", "source": "KA10", "target": "KA4"}, {"rel": "hasInstance", "source": "KA10", "target": "KA5"}, {"rel": "hasInstance", "source": "KA10", "target": "KA6"}, {"rel": "hasInstance", "source": "KA10", "target": "KA7"}, {"rel": "hasInstance", "source": "KA10", "target": "KA8"}, {"rel": "hasInstance", "source": "KA10", "target": "KA9"}, {"rel": "isKindOf", "source": "KA10", "target": "B_PI"}, {"rel": "belongsTo", "source": "KA11", "target": "ObjectOntologyOfIPZ"}, {"rel": "hasInstance", "source": "KA11", "target": "KA1"}, {"rel": "hasInstance", "source": "KA11", "target": "KA2"}, {"rel": "hasInstance", "source": "KA11", "target": "KA3"}, {"rel": "hasInstance", "source": "KA11", "target": "KA5"}, {"rel": "isKindOf", "source": "KA11", "target": "B_Mt"}, {"rel": "isKindOf", "source": "KA11", "target": "P_M"}, {"rel": "belongsTo", "source": "KA12", "target": "ObjectOntologyOfIPZ"}, {"rel": "isKindOf", "source": "KA12", "target": "B_Q"}, {"rel": "isPropertyOf", "source": "KA12", "target": "KA1"}, {"rel": "isPropertyOf", "source": "KA12", "target": "KA3"}, {"rel": "isPropertyOf", "source": "KA12", "target": "KA4"}, {"rel": "isPropertyOf", "source": "KA12", "target": "KA5"}, {"rel": "isPropertyOf", "source": "KA12", "target": "KA6"}, {"rel": "belongsTo", "source": "KA13", "target": "ObjectOntologyOfIPZ"}, {"rel": "isKindOf", "source": "KA13", "target": "B_Sec"}, {"rel": "isKindOf", "source": "KA13", "target": "KA12"}, {"rel": "isPropertyOf", "source": "KA13", "target": "KA3"}, {"rel": "isPropertyOf", "source": "KA13", "target": "KA5"}, {"rel": "isPropertyOf", "source": "KA13", "target": "KA6"}, {"rel": "belongsTo", "source": "KA14", "target": "TaskOntologyOfIPZ"}, {"rel": "isPropertyOf", "source": "KA14", "target": "KA9"}, {"rel": "belongsTo", "source": "KA15", "target": "TaskOntologyOfIPZ"}, {"rel": "isPropertyOf", "source": "KA15", "target": "KA14"}, {"rel": "isPropertyOf", "source": "KA15", "target": "KA9"}, {"rel": "belongsTo", "source": "KA16", "target": "ObjectOntologyOfIPZ"}, {"rel": "isPartOf", "source": "KA16", "target": "KA4"}, {"rel": "isPartOf", "source": "KA16", "target": "KA6"}, {"rel": "belongsTo", "source": "KA17", "target": "ObjectOntologyOfIPZ"}, {"rel": "isPartOf", "source": "KA17", "target": "KA11"}, {"rel": "isPartOf", "source": "KA17", "target": "KA16"}, {"rel": "belongsTo", "source": "KA18", "target": "ObjectOntologyOfIPZ"}, {"rel": "hasInstance", "source": "KA18", "target": "KA10"}, {"rel": "hasInstance", "source": "KA18", "target": "KA3"}, {"rel": "isPartOf", "source": "KA18", "target": "KA9"}, {"rel": "belongsTo", "source": "KA2", "target": "ProcessOntologyOfIPZ"}, {"rel": "isKindOf", "source": "KA2", "target": "B_PI"}, {"rel": "isKindOf", "source": "KA2", "target": "KA3"}, {"rel": "belongsTo", "source": "KA3", "target": "ProcessOntologyOfIPZ"}, {"rel": "isKindOf", "source": "KA3", "target": "B_PI"}, {"rel": "belongsTo", "source": "KA4", "target": "ProcessOntologyOfIPZ"}, {"rel": "isKindOf", "source": "KA4", "target": "B_PI"}, {"rel": "belongsTo", "source": "KA5", "target": "ProcessOntologyOfIPZ"}, {"rel": "isKindOf", "source": "KA5", "target": "B_PI"}, {"rel": "belongsTo", "source": "KA6", "target": "ProcessOntologyOfIPZ"}, {"rel": "hasEnvironmentFrom", "source": "KA6", "target": "KA9"}, {"rel": "hasInputFrom", "source": "KA6", "target": "KA1"}, {"rel": "hasInputFrom", "source": "KA6", "target": "KA4"}, {"rel": "hasMechanismFrom", "source": "KA6", "target": "KA5"}, {"rel": "isKindOf", "source": "KA6", "target": "B_PI"}, {"rel": "belongsTo", "source": "KA7", "target": "ProcessOntologyOfIPZ"}, {"rel": "isKindOf", "source": "KA7", "target": "B_PI"}, {"rel": "belongsTo", "source": "KA8", "target": "ProcessOntologyOfIPZ"}, {"rel": "isKindOf", "source": "KA8", "target": "B_PI"}, {"rel": "isPartOf", "source": "KA8", "target": "KA6"}, {"rel": "isPartOf", "source": "KA8", "target": "KA9"}, {"rel": "belongsTo", "source": "KA9", "target": "ProcessOntologyOfIPZ"}, {"rel": "isKindOf", "source": "KA9", "target": "B_PI"}, {"rel": "isKindOf", "source": "KA9", "target": "P_U"}, {"rel": "isPartOf", "source": "P6_1", "target": "KA6"}, {"rel": "isPartOf", "source": "P6_1_1", "target": "P6_1"}, {"rel": "isPartOf", "source": "P6_1_1_1", "target": "P6_1_1"}, {"rel": "isPartOf", "source": "P6_1_1_2", "target": "P6_1_1"}, {"rel": "isPartOf", "source": "P6_1_1_3", "target": "P6_1_1"}, {"rel": "isPartOf", "source": "P6_1_1_4", "target": "P6_1_1"}, {"rel": "isPartOf", "source": "P6_1_1_5", "target": "P6_1_1"}, {"rel": "isPartOf", "source": "P6_1_2", "target": "P6_1"}, {"rel": "isPartOf", "source": "P6_1_2_1", "target": "P6_1_2"}, {"rel": "isPartOf", "source": "P6_1_2_2", "target": "P6_1_2"}, {"rel": "isPartOf", "source": "P6_1_3", "target": "P6_1"}, {"rel": "isPartOf", "source": "P6_1_3_1", "target": "P6_1_3"}, {"rel": "isPartOf", "source": "P6_1_3_2", "target": "P6_1_3"}, {"rel": "isPartOf", "source": "P6_1_3_3", "target": "P6_1_3"}, {"rel": "isPartOf", "source": "P6_1_4", "target": "P6_1"}, {"rel": "isPartOf", "source": "P6_1_4_1", "target": "P6_1_4"}, {"rel": "isPartOf", "source": "P6_1_4_2", "target": "P6_1_4"}, {"rel": "isPartOf", "source": "P6_1_4_3", "target": "P6_1_4"}, {"rel": "isPartOf", "source": "P6_1_4_4", "target": "P6_1_4"}, {"rel": "isPartOf", "source": "P6_1_5", "target": "P6_1"}, {"rel": "isPartOf", "source": "P6_1_5_1", "target": "P6_1_5"}, {"rel": "isPartOf", "source": "P6_1_5_2", "target": "P6_1_5"}, {"rel": "isPartOf", "source": "P6_1_5_3", "target": "P6_1_5"}, {"rel": "isPartOf", "source": "P6_1_6", "target": "P6_1"}, {"rel": "isPartOf", "source": "P6_1_6_1", "target": "P6_1_6"}, {"rel": "isPartOf", "source": "P6_1_6_2", "target": "P6_1_6"}, {"rel": "isPartOf", "source": "P6_1_6_3", "target": "P6_1_6"}, {"rel": "isPartOf", "source": "P6_1_6_4", "target": "P6_1_6"}, {"rel": "isPartOf", "source": "P6_1_7", "target": "P6_1"}, {"rel": "isPartOf", "source": "P6_1_7_1", "target": "P6_1_7"}, {"rel": "isPartOf", "source": "P6_1_7_2", "target": "P6_1_7"}, {"rel": "isPartOf", "source": "P6_1_7_3", "target": "P6_1_7"}, {"rel": "isPartOf", "source": "P6_2", "target": "KA6"}, {"rel": "isPartOf", "source": "P6_2_1", "target": "P6_2"}, {"rel": "isPartOf", "source": "P6_2_1_1", "target": "P6_2_1"}, {"rel": "isPartOf", "source": "P6_2_1_2", "target": "P6_2_1"}, {"rel": "isPartOf", "source": "P6_2_1_3", "target": "P6_2_1"}, {"rel": "isPartOf", "source": "P6_2_2", "target": "P6_2"}, {"rel": "isPartOf", "source": "P6_2_2_1", "target": "P6_2_2"}, {"rel": "isPartOf", "source": "P6_2_2_2", "target": "P6_2_2"}, {"rel": "isPartOf", "source": "P6_2_2_3", "target": "P6_2_2"}, {"rel": "isPartOf", "source": "P6_2_2_4", "target": "P6_2_2"}, {"rel": "isPartOf", "source": "P6_2_2_5", "target": "P6_2_2"}, {"rel": "isPartOf", "source": "P6_2_2_6", "target": "P6_2_2"}, {"rel": "isPartOf", "source": "P6_2_2_7", "target": "P6_2_2"}, {"rel": "isPartOf", "source": "P6_2_2_8", "target": "P6_2_2"}, {"rel": "isPartOf", "source": "P6_2_3", "target": "P6_2"}, {"rel": "isPartOf", "source": "P6_2_3_1", "target": "P6_2_3"}, {"rel": "isPartOf", "source": "P6_2_3_2", "target": "P6_2_3"}, {"rel": "isPartOf", "source": "P6_2_3_3", "target": "P6_2_3"}, {"rel": "isPartOf", "source": "P6_2_4", "target": "P6_2"}, {"rel": "isPartOf", "source": "P6_2_4_1", "target": "P6_2_4"}, {"rel": "isPartOf", "source": "P6_2_4_2", "target": "P6_2_4"}, {"rel": "isPartOf", "source": "P6_2_4_3", "target": "P6_2_4"}, {"rel": "isPartOf", "source": "P6_2_4_4", "target": "P6_2_4"}, {"rel": "isPartOf", "source": "P6_2_5", "target": "P6_2"}, {"rel": "isPartOf", "source": "P6_2_5_1", "target": "P6_2_5"}, {"rel": "isPartOf", "source": "P6_2_5_2", "target": "P6_2_5"}, {"rel": "isPartOf", "source": "P6_2_5_3", "target": "P6_2_5"}, {"rel": "isPartOf", "source": "P6_3", "target": "KA6"}, {"rel": "isPartOf", "source": "P6_3_1", "target": "P6_3"}, {"rel": "isPartOf", "source": "P6_3_1_1", "target": "P6_3_1"}, {"rel": "isPartOf", "source": "P6_3_1_2", "target": "P6_3_1"}, {"rel": "isPartOf", "source": "P6_3_1_3", "target": "P6_3_1"}, {"rel": "isPartOf", "source": "P6_3_1_4", "target": "P6_3_1"}, {"rel": "isPartOf", "source": "P6_3_1_5", "target": "P6_3_1"}, {"rel": "isPartOf", "source": "P6_3_2", "target": "P6_3"}, {"rel": "isPartOf", "source": "P6_3_2_1", "target": "P6_3_2"}, {"rel": "isPartOf", "source": "P6_3_2_2", "target": "P6_3_2"}, {"rel": "isPartOf", "source": "P6_3_2_3", "target": "P6_3_2"}, {"rel": "isPartOf", "source": "P6_3_3", "target": "P6_3"}, {"rel": "isPartOf", "source": "P6_3_3_1", "target": "P6_3_3"}, {"rel": "isPartOf", "source": "P6_3_3_2", "target": "P6_3_3"}, {"rel": "isPartOf", "source": "P6_3_3_3", "target": "P6_3_3"}, {"rel": "isPartOf", "source": "P6_3_4", "target": "P6_3"}, {"rel": "isPartOf", "source": "P6_3_4_1", "target": "P6_3_4"}, {"rel": "isPartOf", "source": "P6_3_4_2", "target": "P6_3_4"}, {"rel": "isPartOf", "source": "P6_3_4_3", "target": "P6_3_4"}, {"rel": "isPartOf", "source": "P_A", "target": "B_SW"}, {"rel": "isPartOf", "source": "P_A", "target": "KA16"}, {"rel": "isPartOf", "source": "P_C", "target": "KA16"}, {"rel": "isPartOf", "source": "P_Cost", "target": "KA15"}, {"rel": "isPartOf", "source": "P_Cost", "target": "KA9"}, {"rel": "isPropertyOf", "source": "P_Cost", "target": "B_Ef"}, {"rel": "isPropertyOf", "source": "P_D", "target": "B_Cfg"}, {"rel": "isPropertyOf", "source": "P_D", "target": "B_LC"}, {"rel": "isPropertyOf", "source": "P_G", "target": "B_PI"}, {"rel": "isPropertyOf", "source": "P_G", "target": "B_SH"}, {"rel": "isPropertyOf", "source": "P_H", "target": "B_PI"}, {"rel": "isPartOf", "source": "P_M", "target": "KA18"}, {"rel": "isPartOf", "source": "P_P", "target": "KA14"}, {"rel": "isPartOf", "source": "P_Pr", "target": "KA18"}, {"rel": "isPartOf", "source": "P_SetRelationFunction", "target": "KA17"}, {"rel": "isPartOf", "source": "P_d", "target": "B_SW"}, {"rel": "isPartOf", "source": "P_d", "target": "KA16"}, {"rel": "isPartOf", "source": "P_e", "target": "B_Cfg"}, {"rel": "isPartOf", "source": "P_m", "target": "KA15"}, {"rel": "isPartOf", "source": "P_m", "target": "KA18"}, {"rel": "isPartOf", "source": "P_m", "target": "KA9"}, {"rel": "isPartOf", "source": "P_r", "target": "KA15"}, {"rel": "isPartOf", "source": "P_r", "target": "KA9"}, {"rel": "belongsTo", "source": "T6_1", "target": "ObjectOntologyOfIPZ"}, {"rel": "belongsTo", "source": "T6_2", "target": "ObjectOntologyOfIPZ"}, {"rel": "belongsTo", "source": "T6_3", "target": "ObjectOntologyOfIPZ"}, {"rel": "belongsTo", "source": "T6_4", "target": "ObjectOntologyOfIPZ"}, {"rel": "systemicUnionOf", "source": "Union1", "target": "KA1"}, {"rel": "systemicUnionOf", "source": "Union1", "target": "KA2"}, {"rel": "systemicUnionOf", "source": "Union1", "target": "KA3"}, {"rel": "systemicUnionOf", "source": "Union1", "target": "KA4"}, {"rel": "systemicUnionOf", "source": "Union1", "target": "KA5"}, {"rel": "systemicUnionOf", "source": "Union1", "target": "KA6"}, {"rel": "systemicUnionOf", "source": "Union1", "target": "KA7"}, {"rel": "systemicUnionOf", "source": "Union2", "target": "KA4"}, {"rel": "systemicUnionOf", "source": "Union2", "target": "KA5"}, {"rel": "systemicUnionOf", "source": "Union2", "target": "KA6"}, {"rel": "systemicUnionOf", "source": "Union2", "target": "KA8"}, {"rel": "systemicUnionOf", "source": "Union3", "target": "KA13"}, {"rel": "systemicUnionOf", "source": "Union3", "target": "KA6"}, {"rel": "systemicUnionOf", "source": "Union4", "target": "KA6"}, {"rel": "systemicUnionOf", "source": "Union4", "target": "KA7"}, {"rel": "systemicUnionOf", "source": "Union5", "target": "KA16"}, {"rel": "systemicUnionOf", "source": "Union5", "target": "KA17"}, {"rel": "systemicUnionOf", "source": "Union5", "target": "KA18"}], "groups": [{"color": "#d0602a", "hidden": false, "id": "Oп", "label": "KA — процеси (Oп)"}, {"color": "#2f6db0", "hidden": false, "id": "Oо", "label": "KA — об'єкти (Oо)"}, {"color": "#119a78", "hidden": false, "id": "Oз", "label": "KA — задачі (Oз)"}, {"color": "#8f3d14", "hidden": false, "id": "ka6", "label": "KA 6: процес, підпроцеси, дії"}, {"color": "#e0a07a", "hidden": true, "id": "ka6op", "label": "KA 6: операції"}, {"color": "#8a6d3b", "hidden": false, "id": "ka6aux", "label": "KA 6: практичні аспекти, інструменти"}, {"color": "#a3abb5", "hidden": false, "id": "prim", "label": "Первинні поняття ЛПМ"}, {"color": "#5f6b7a", "hidden": false, "id": "basic", "label": "Базові поняття ЛПМ"}, {"color": "#1f2328", "hidden": false, "id": "sys", "label": "Системна онтологія, поєднання s"}], "individuals": {"B_Af": {"comment": "Матеріальний або інформаційний результат процесу ПІ (специфікація, модель, код, збірка)", "group": "basic", "id": "B_Af", "label": "Артефакт", "label_en": null, "primaryType": "BasicConcept", "props": {"lpmFormula": ["(х) d, M"], "seeAlso": ["Л3 сл. 11 (вихід процесу)"]}, "types": ["BasicConcept"]}, "B_Cfg": {"comment": "Сукупність ідентифікованих елементів ПЗ у фіксованому стані", "group": "basic", "id": "B_Cfg", "label": "Конфігурація ПЗ", "label_en": null, "primaryType": "BasicConcept", "props": {"lpmFormula": ["(а) SW, Af, e; (о) D"], "seeAlso": ["KA 8 §2 (с. 8-6)"]}, "types": ["BasicConcept"]}, "B_Ef": {"comment": "Властивість процесу формувати цільові результати співвіднесено з ресурсами", "group": "basic", "id": "B_Ef", "label": "Ефективність процесу", "label_en": null, "primaryType": "BasicConcept", "props": {"lpmFormula": ["(о) $; —о→ PI"], "seeAlso": ["Л3 сл. 9; KA 15 §10.5 (с. 15-17)"]}, "types": ["BasicConcept"]}, "B_Eng": {"comment": "Суб'єкт професійної діяльності, який реалізує процеси ПІ", "group": "basic", "id": "B_Eng", "label": "Інженер ПЗ (фахівець)", "label_en": null, "primaryType": "BasicConcept", "props": {"lpmFormula": ["(х) H; (о) PI"], "seeAlso": ["Л2 сл. 33; KA 14 §1"]}, "types": ["BasicConcept"]}, "B_LC": {"comment": "Упорядкована сукупність процесів від задуму до виведення з експлуатації", "group": "basic", "id": "B_LC", "label": "Життєвий цикл ПЗ", "label_en": null, "primaryType": "BasicConcept", "props": {"lpmFormula": ["(а) PI; (о) D"], "seeAlso": ["KA 10 §2.1 (с. 10-3)"]}, "types": ["BasicConcept"]}, "B_Mt": {"comment": "Упорядкований спосіб виконання дій процесу ПІ", "group": "basic", "id": "B_Mt", "label": "Метод ІПЗ", "label_en": null, "primaryType": "BasicConcept", "props": {"lpmFormula": ["(х) M; —а→ PI"], "seeAlso": ["KA 11 §4 (с. 11-7)"]}, "types": ["BasicConcept"]}, "B_OE": {"comment": "Інфраструктура (ОС, СКБД, сервери, хмарні платформи), в якій функціонує програмний продукт", "group": "basic", "id": "B_OE", "label": "Середовище експлуатації", "label_en": null, "primaryType": "BasicConcept", "props": {"lpmFormula": ["(х) c; (а) SW"], "seeAlso": ["KA 6 §1.1 (с. 6-3), §2.2 (с. 6-7); KA 16 §5–§6"]}, "types": ["BasicConcept"]}, "B_PI": {"comment": "Доцільний продуктовий процес діяльності, об'єктом якого є програмний продукт", "group": "basic", "id": "B_PI", "label": "Процес інженерії ПЗ (процес ПІ)", "label_en": null, "primaryType": "BasicConcept", "props": {"lpmFormula": ["(х) Pr; (о) H, G, SP"], "seeAlso": ["Л3 сл. 6, 10; KA 10 §1.2 (с. 10-3)"]}, "types": ["BasicConcept"]}, "B_Pj": {"comment": "Сукупність дій з визначеними термінами для створення продукту відповідно до ресурсів і вимог", "group": "basic", "id": "B_Pj", "label": "Проєкт", "label_en": null, "primaryType": "BasicConcept", "props": {"lpmFormula": ["(х) PI"], "seeAlso": ["Л3 сл. 11; ISO/IEC/IEEE 12207"]}, "types": ["BasicConcept"]}, "B_Q": {"comment": "Ступінь відповідності ПЗ потребам стейкхолдерів; сукупність характеристик", "group": "basic", "id": "B_Q", "label": "Якість ПЗ", "label_en": null, "primaryType": "BasicConcept", "props": {"lpmFormula": ["(о) Rq; —о→ SP"], "seeAlso": ["KA 12 §1 (с. 12-3)"]}, "types": ["BasicConcept"]}, "B_Rq": {"comment": "Властивість, яку має виявляти ПЗ для розв'язання задачі стейкхолдера", "group": "basic", "id": "B_Rq", "label": "Вимога", "label_en": null, "primaryType": "BasicConcept", "props": {"lpmFormula": ["(о) SH; —о→ SP"], "seeAlso": ["KA 1 §1.1 (с. 1-2)"]}, "types": ["BasicConcept"]}, "B_SH": {"comment": "Людина або організація, що має інтерес до результату процесу", "group": "basic", "id": "B_SH", "label": "Стейкхолдер", "label_en": null, "primaryType": "BasicConcept", "props": {"lpmFormula": ["(х) H; (о) G"], "seeAlso": ["KA 1 §2.1; KA 2 §1.2 (с. 2-3)"]}, "types": ["BasicConcept"]}, "B_SP": {"comment": "Завершене програмне рішення, готове до використання; цільовий результат процесів ІПЗ", "group": "basic", "id": "B_SP", "label": "Програмний продукт", "label_en": null, "primaryType": "BasicConcept", "props": {"lpmFormula": ["(х) SW"], "seeAlso": ["Л1 сл. 16"]}, "types": ["BasicConcept"]}, "B_SW": {"comment": "Упорядкована множина машинних кодів разом із артефактами, що забезпечують їх розроблення, впровадження і використання", "group": "basic", "id": "B_SW", "label": "Програмне забезпечення (ПЗ)", "label_en": null, "primaryType": "BasicConcept", "props": {"lpmFormula": ["(х) S; (а) d, A"], "seeAlso": ["Л1 сл. 14, 17, 19; SEVOCAB"]}, "types": ["BasicConcept"]}, "B_Sec": {"comment": "Здатність ПЗ захищати інформацію та дані від несанкціонованих дій", "group": "basic", "id": "B_Sec", "label": "Безпека ПЗ", "label_en": null, "primaryType": "BasicConcept", "props": {"lpmFormula": ["(х) Q"], "seeAlso": ["KA 13 §1 (с. 13-1)"]}, "types": ["BasicConcept"]}, "B_Std": {"comment": "Нормативний документ, що фіксує узгоджені вимоги до процесів або продуктів", "group": "basic", "id": "B_Std", "label": "Стандарт", "label_en": null, "primaryType": "BasicConcept", "props": {"lpmFormula": ["(х) I; (о) Rq"], "seeAlso": ["KA 18 §8 (с. 18-15); Л2 сл. 37"]}, "types": ["BasicConcept"]}, "B_Sv": {"comment": "Результат операційного процесу, що споживається користувачами за узгодженим рівнем (SLA)", "group": "basic", "id": "B_Sv", "label": "Сервіс (операційна послуга)", "label_en": null, "primaryType": "BasicConcept", "props": {"lpmFormula": ["(s) SP, OE, Q"], "seeAlso": ["KA 6 §2.3 (с. 6-8); ISO/IEC 20000-1:2018"]}, "types": ["BasicConcept"]}, "B_T": {"comment": "Програмний засіб, який автоматизує дії процесів ПІ", "group": "basic", "id": "B_T", "label": "Інструментальний засіб", "label_en": null, "primaryType": "BasicConcept", "props": {"lpmFormula": ["(х) SW; —а→ PI"], "seeAlso": ["Л2 сл. 32"]}, "types": ["BasicConcept"]}, "C6_1": {"comment": null, "group": "ka6aux", "id": "C6_1", "label": "Запобігання інцидентам і проблемам", "label_en": "Incident and Problem Prevention", "primaryType": "PracticalConsideration", "props": {"swebokPage": ["6-12"], "swebokSection": ["§5.1"]}, "types": ["PracticalConsideration"]}, "C6_2": {"comment": null, "group": "ka6aux", "id": "C6_2", "label": "Керування операційними ризиками", "label_en": "Operational Risk Management", "primaryType": "PracticalConsideration", "props": {"swebokPage": ["6-12"], "swebokSection": ["§5.2"]}, "types": ["PracticalConsideration"]}, "C6_3": {"comment": null, "group": "ka6aux", "id": "C6_3", "label": "Автоматизація операцій", "label_en": "Automating Software Engineering Operations", "primaryType": "PracticalConsideration", "props": {"swebokPage": ["6-12"], "swebokSection": ["§5.3"]}, "types": ["PracticalConsideration"]}, "C6_4": {"comment": null, "group": "ka6aux", "id": "C6_4", "label": "Операції у малих організаціях (ISO/IEC 29110)", "label_en": "Software Engineering Operations for Small Organizations", "primaryType": "PracticalConsideration", "props": {"swebokPage": ["6-13"], "swebokSection": ["§5.4"]}, "types": ["PracticalConsideration"]}, "F6_3": {"comment": null, "group": "ka6", "id": "F6_3", "label": "Інсталяція ПЗ", "label_en": "Software Installation", "primaryType": "FundamentalAction", "props": {"swebokPage": ["6-5"], "swebokSection": ["§1.3"]}, "types": ["FundamentalAction"]}, "F6_4": {"comment": null, "group": "ka6", "id": "F6_4", "label": "Скриптування та автоматизація", "label_en": "Scripting and Automating", "primaryType": "FundamentalAction", "props": {"swebokPage": ["6-5"], "swebokSection": ["§1.4"]}, "types": ["FundamentalAction"]}, "F6_5": {"comment": null, "group": "ka6", "id": "F6_5", "label": "Ефективне тестування та усунення несправностей", "label_en": "Effective Testing and Troubleshooting", "primaryType": "FundamentalAction", "props": {"swebokPage": ["6-5"], "swebokSection": ["§1.5"]}, "types": ["FundamentalAction"]}, "F6_6": {"comment": null, "group": "ka6", "id": "F6_6", "label": "Продуктивність, надійність, балансування навантаження", "label_en": "Performance, Reliability and Load Balancing", "primaryType": "FundamentalAction", "props": {"swebokPage": ["6-6"], "swebokSection": ["§1.6"]}, "types": ["FundamentalAction"]}, "KA1": {"comment": null, "group": "Oп", "id": "KA1", "label": "Вимоги до ПЗ", "label_en": "Software Requirements", "primaryType": "ProcessKA", "props": {"kaNumber": ["1"], "seeAlso": ["SWEBOK Guide v4.0, глава 1, с. 1-1"], "swebokPage": ["1-1"], "swebokSection": ["Chapter 1"]}, "types": ["ProcessKA", "SoftwareEngineeringProcess"]}, "KA10": {"comment": null, "group": "Oп", "id": "KA10", "label": "Процес інженерії ПЗ", "label_en": "Software Engineering Process", "primaryType": "ProcessKA", "props": {"kaNumber": ["10"], "seeAlso": ["SWEBOK Guide v4.0, глава 10, с. 10-1"], "swebokPage": ["10-1"], "swebokSection": ["Chapter 10"]}, "types": ["ProcessKA", "SoftwareEngineeringProcess"]}, "KA11": {"comment": null, "group": "Oо", "id": "KA11", "label": "Моделі та методи інженерії ПЗ", "label_en": "Software Engineering Models and Methods", "primaryType": "ObjectKA", "props": {"kaNumber": ["11"], "seeAlso": ["SWEBOK Guide v4.0, глава 11, с. 11-1"], "swebokPage": ["11-1"], "swebokSection": ["Chapter 11"]}, "types": ["ObjectKA"]}, "KA12": {"comment": null, "group": "Oо", "id": "KA12", "label": "Якість ПЗ", "label_en": "Software Quality", "primaryType": "ObjectKA", "props": {"kaNumber": ["12"], "seeAlso": ["SWEBOK Guide v4.0, глава 12, с. 12-1"], "swebokPage": ["12-1"], "swebokSection": ["Chapter 12"]}, "types": ["ObjectKA"]}, "KA13": {"comment": null, "group": "Oо", "id": "KA13", "label": "Безпека ПЗ", "label_en": "Software Security", "primaryType": "ObjectKA", "props": {"kaNumber": ["13"], "seeAlso": ["SWEBOK Guide v4.0, глава 13, с. 13-1"], "swebokPage": ["13-1"], "swebokSection": ["Chapter 13"]}, "types": ["ObjectKA"]}, "KA14": {"comment": null, "group": "Oз", "id": "KA14", "label": "Професійна практика інженерії ПЗ", "label_en": "Software Engineering Professional Practice", "primaryType": "TaskKA", "props": {"kaNumber": ["14"], "seeAlso": ["SWEBOK Guide v4.0, глава 14, с. 14-1"], "swebokPage": ["14-1"], "swebokSection": ["Chapter 14"]}, "types": ["TaskKA"]}, "KA15": {"comment": null, "group": "Oз", "id": "KA15", "label": "Економіка інженерії ПЗ", "label_en": "Software Engineering Economics", "primaryType": "TaskKA", "props": {"kaNumber": ["15"], "seeAlso": ["SWEBOK Guide v4.0, глава 15, с. 15-1"], "swebokPage": ["15-1"], "swebokSection": ["Chapter 15"]}, "types": ["TaskKA"]}, "KA16": {"comment": null, "group": "Oо", "id": "KA16", "label": "Основи обчислень", "label_en": "Computing Foundations", "primaryType": "ObjectKA", "props": {"kaNumber": ["16"], "seeAlso": ["SWEBOK Guide v4.0, глава 16, с. 16-1"], "swebokPage": ["16-1"], "swebokSection": ["Chapter 16"]}, "types": ["ObjectKA"]}, "KA17": {"comment": null, "group": "Oо", "id": "KA17", "label": "Математичні основи", "label_en": "Mathematical Foundations", "primaryType": "ObjectKA", "props": {"kaNumber": ["17"], "seeAlso": ["SWEBOK Guide v4.0, глава 17, с. 17-1"], "swebokPage": ["17-1"], "swebokSection": ["Chapter 17"]}, "types": ["ObjectKA"]}, "KA18": {"comment": null, "group": "Oо", "id": "KA18", "label": "Інженерні основи", "label_en": "Engineering Foundations", "primaryType": "ObjectKA", "props": {"kaNumber": ["18"], "seeAlso": ["SWEBOK Guide v4.0, глава 18, с. 18-1"], "swebokPage": ["18-1"], "swebokSection": ["Chapter 18"]}, "types": ["ObjectKA"]}, "KA2": {"comment": null, "group": "Oп", "id": "KA2", "label": "Архітектура ПЗ", "label_en": "Software Architecture", "primaryType": "ProcessKA", "props": {"kaNumber": ["2"], "seeAlso": ["SWEBOK Guide v4.0, глава 2, с. 2-1"], "swebokPage": ["2-1"], "swebokSection": ["Chapter 2"]}, "types": ["ProcessKA", "SoftwareEngineeringProcess"]}, "KA3": {"comment": null, "group": "Oп", "id": "KA3", "label": "Проєктування ПЗ", "label_en": "Software Design", "primaryType": "ProcessKA", "props": {"kaNumber": ["3"], "seeAlso": ["SWEBOK Guide v4.0, глава 3, с. 3-1"], "swebokPage": ["3-1"], "swebokSection": ["Chapter 3"]}, "types": ["ProcessKA", "SoftwareEngineeringProcess"]}, "KA4": {"comment": null, "group": "Oп", "id": "KA4", "label": "Конструювання ПЗ", "label_en": "Software Construction", "primaryType": "ProcessKA", "props": {"kaNumber": ["4"], "seeAlso": ["SWEBOK Guide v4.0, глава 4, с. 4-1"], "swebokPage": ["4-1"], "swebokSection": ["Chapter 4"]}, "types": ["ProcessKA", "SoftwareEngineeringProcess"]}, "KA5": {"comment": null, "group": "Oп", "id": "KA5", "label": "Тестування ПЗ", "label_en": "Software Testing", "primaryType": "ProcessKA", "props": {"kaNumber": ["5"], "seeAlso": ["SWEBOK Guide v4.0, глава 5, с. 5-1"], "swebokPage": ["5-1"], "swebokSection": ["Chapter 5"]}, "types": ["ProcessKA", "SoftwareEngineeringProcess"]}, "KA6": {"comment": "the set of activities and tasks necessary to deploy, operate and support a software application or system while preserving its integrity and stability", "group": "Oп", "id": "KA6", "label": "Операції інженерії ПЗ", "label_en": "Software Engineering Operations", "primaryType": "ProcessKA", "props": {"hasEnvironment": ["середовища розроблення, QA, передпродуктивне, продуктивне; ІТ-інфраструктура; IaaS/PaaS; постачальники"], "hasGoal": ["цілісність і стабільність системи; досягнення цільових рівнів обслуговування; мінімізація порушень від інцидентів"], "hasIndicator": ["KPI у реальному часі за §4.2: телеметрія, результати V&V, активність користувачів, залежності, зміни конфігурації, безпека і стійкість"], "hasInput": ["release candidate від KA 4; нефункціональні вимоги; запити на зміни та звіти про проблеми; бізнес-прогнози; угоди з постачальниками"], "hasMechanism": ["інженери операцій та інженери ПЗ; контейнери й віртуалізація; засоби розгортання; автоматизоване тестування; моніторинг і телеметрія"], "hasMetric": ["доступність; навантаження; продуктивність; обсяг транзакцій; використання ресурсів; кількість інцидентів"], "hasOutput": ["розгорнутий продукт; операційний сервіс за SLA; сервісні звіти; записи інцидентів/проблем/змін; телеметрія та KPI; плани"], "hasTechnology": ["DevOps, IaC, PaC, CI/CD, SRE, Platform Engineering, ITIL/ISO/IEC 20000-1"], "kaNumber": ["6"], "notation": ["P6"], "seeAlso": ["SWEBOK Guide v4.0, глава 6, с. 6-1"], "swebokPage": ["6-1"], "swebokSection": ["Chapter 6"]}, "types": ["ProcessKA", "SoftwareEngineeringProcess"]}, "KA7": {"comment": null, "group": "Oп", "id": "KA7", "label": "Супроводження ПЗ", "label_en": "Software Maintenance", "primaryType": "ProcessKA", "props": {"kaNumber": ["7"], "seeAlso": ["SWEBOK Guide v4.0, глава 7, с. 7-1"], "swebokPage": ["7-1"], "swebokSection": ["Chapter 7"]}, "types": ["ProcessKA", "SoftwareEngineeringProcess"]}, "KA8": {"comment": null, "group": "Oп", "id": "KA8", "label": "Управління конфігурацією ПЗ", "label_en": "Software Configuration Management", "primaryType": "ProcessKA", "props": {"kaNumber": ["8"], "seeAlso": ["SWEBOK Guide v4.0, глава 8, с. 8-1"], "swebokPage": ["8-1"], "swebokSection": ["Chapter 8"]}, "types": ["ProcessKA", "SoftwareEngineeringProcess"]}, "KA9": {"comment": null, "group": "Oп", "id": "KA9", "label": "Управління інженерією ПЗ", "label_en": "Software Engineering Management", "primaryType": "ProcessKA", "props": {"kaNumber": ["9"], "seeAlso": ["SWEBOK Guide v4.0, глава 9, с. 9-1"], "swebokPage": ["9-1"], "swebokSection": ["Chapter 9"]}, "types": ["ProcessKA", "SoftwareEngineeringProcess"]}, "ObjectOntologyOfIPZ": {"comment": null, "group": "sys", "id": "ObjectOntologyOfIPZ", "label": "Онтологія об'єктів Oо", "label_en": null, "primaryType": "ObjectOntology", "props": {}, "types": ["ObjectOntology"]}, "P6_1": {"comment": "Стадія: pre-delivery", "group": "ka6", "id": "P6_1", "label": "Планування операцій", "label_en": "Software Engineering Operations Planning", "primaryType": "SubProcess", "props": {"swebokPage": ["6-6"], "swebokSection": ["§2"]}, "types": ["SubProcess"]}, "P6_1_1": {"comment": null, "group": "ka6", "id": "P6_1_1", "label": "Розроблення плану операцій", "label_en": "Operations Plan", "primaryType": "Action", "props": {"swebokPage": ["6-6"], "swebokSection": ["§2.1.1"]}, "types": ["Action"]}, "P6_1_1_1": {"comment": null, "group": "ka6op", "id": "P6_1_1_1", "label": "Розроблення концепт-документа (concept document)", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-6"], "swebokSection": ["§2.1.1"]}, "types": ["Operation"]}, "P6_1_1_2": {"comment": null, "group": "ka6op", "id": "P6_1_1_2", "label": "Розроблення плану операцій і супроводження (обсяг, адаптація процесу й інструментів, організація, оцінка витрат)", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-6"], "swebokSection": ["§2.1.1"]}, "types": ["Operation"]}, "P6_1_1_3": {"comment": null, "group": "ka6op", "id": "P6_1_1_3", "label": "Формування концепції операцій (CONOPS): порядок подання запитів на зміни та звітів про проблеми", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-6"], "swebokSection": ["§2.1.1"]}, "types": ["Operation"]}, "P6_1_1_4": {"comment": null, "group": "ka6op", "id": "P6_1_1_4", "label": "Планування релізів/версій: дати доступності, склад релізу, конфлікти, ризик релізу та план відкату, інформування стейкхолдерів", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-7"], "swebokSection": ["§2.1.1"]}, "types": ["Operation"]}, "P6_1_1_5": {"comment": null, "group": "ka6op", "id": "P6_1_1_5", "label": "Бізнес-планування операційної організації (бюджет, фінанси, кадри)", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-7"], "swebokSection": ["§2.1.1"]}, "types": ["Operation"]}, "P6_1_2": {"comment": null, "group": "ka6", "id": "P6_1_2", "label": "Керування постачальниками", "label_en": "Supplier Management", "primaryType": "Action", "props": {"swebokPage": ["6-7"], "swebokSection": ["§2.1.2"]}, "types": ["Action"]}, "P6_1_2_1": {"comment": null, "group": "ka6op", "id": "P6_1_2_1", "label": "Укладання угод на придбання продуктів/послуг постачальників", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-7"], "swebokSection": ["§2.1.2"]}, "types": ["Operation"]}, "P6_1_2_2": {"comment": null, "group": "ka6op", "id": "P6_1_2_2", "label": "Керування аутсорсинговими та хмарними (IaaS, PaaS) послугами", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-7"], "swebokSection": ["§2.1.2"]}, "types": ["Operation"]}, "P6_1_3": {"comment": null, "group": "ka6", "id": "P6_1_3", "label": "Формування середовищ розроблення та експлуатації", "label_en": "Development and Operational Environments", "primaryType": "Action", "props": {"swebokPage": ["6-7"], "swebokSection": ["§2.2"]}, "types": ["Action"]}, "P6_1_3_1": {"comment": null, "group": "ka6op", "id": "P6_1_3_1", "label": "Визначення середовищ: розроблення, тестування (QA), передпродуктивне, продуктивне", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-7"], "swebokSection": ["§2.2"]}, "types": ["Operation"]}, "P6_1_3_2": {"comment": null, "group": "ka6op", "id": "P6_1_3_2", "label": "Забезпечення узгодженості та синхронізації середовищ із продуктивним", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-8"], "swebokSection": ["§2.2"]}, "types": ["Operation"]}, "P6_1_3_3": {"comment": null, "group": "ka6op", "id": "P6_1_3_3", "label": "Автоматизоване створення середовищ з єдиного репозиторію коду (IaC)", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-8"], "swebokSection": ["§2.2"]}, "types": ["Operation"]}, "P6_1_4": {"comment": null, "group": "ka6", "id": "P6_1_4", "label": "Керування доступністю, неперервністю та рівнями обслуговування", "label_en": "Software Availability, Continuity, and Service Levels", "primaryType": "Action", "props": {"swebokPage": ["6-8"], "swebokSection": ["§2.3"]}, "types": ["Action"]}, "P6_1_4_1": {"comment": null, "group": "ka6op", "id": "P6_1_4_1", "label": "Планування, проєктування, реалізація і тестування інфраструктури доступності", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-8"], "swebokSection": ["§2.3"]}, "types": ["Operation"]}, "P6_1_4_2": {"comment": null, "group": "ka6op", "id": "P6_1_4_2", "label": "Вимірювання та реєстрація доступності; розслідування позапланової недоступності", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-8"], "swebokSection": ["§2.3"]}, "types": ["Operation"]}, "P6_1_4_3": {"comment": null, "group": "ka6op", "id": "P6_1_4_3", "label": "Визначення, узгодження і документування SLA", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-8"], "swebokSection": ["§2.3"]}, "types": ["Operation"]}, "P6_1_4_4": {"comment": null, "group": "ka6op", "id": "P6_1_4_4", "label": "Моніторинг узгодженого рівня обслуговування (навантаження, продуктивність, тренди, задоволеність)", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-8"], "swebokSection": ["§2.3"]}, "types": ["Operation"]}, "P6_1_5": {"comment": null, "group": "ka6", "id": "P6_1_5", "label": "Керування потужністю", "label_en": "Software Capacity Management", "primaryType": "Action", "props": {"swebokPage": ["6-8"], "swebokSection": ["§2.4"]}, "types": ["Action"]}, "P6_1_5_1": {"comment": null, "group": "ka6op", "id": "P6_1_5_1", "label": "Переведення бізнес-прогнозів і оцінок навантаження у вимоги до потужності", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-8"], "swebokSection": ["§2.4"]}, "types": ["Operation"]}, "P6_1_5_2": {"comment": null, "group": "ka6op", "id": "P6_1_5_2", "label": "Збирання й аналіз даних про використання ресурсів", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-8"], "swebokSection": ["§2.4"]}, "types": ["Operation"]}, "P6_1_5_3": {"comment": null, "group": "ka6op", "id": "P6_1_5_3", "label": "Розроблення плану потужності (не рідше ніж щорічно) з вартісними варіантами", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-8"], "swebokSection": ["§2.4"]}, "types": ["Operation"]}, "P6_1_6": {"comment": null, "group": "ka6", "id": "P6_1_6", "label": "Резервне копіювання, відновлення після аварій, відмовостійкість", "label_en": "Software Backup, Disaster Recovery, and Failover", "primaryType": "Action", "props": {"swebokPage": ["6-8"], "swebokSection": ["§2.5"]}, "types": ["Action"]}, "P6_1_6_1": {"comment": null, "group": "ka6op", "id": "P6_1_6_1", "label": "Вибір методів резервного копіювання (повне/інкрементне), точок відновлення, місця та терміну зберігання", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-9"], "swebokSection": ["§2.5"]}, "types": ["Operation"]}, "P6_1_6_2": {"comment": null, "group": "ka6op", "id": "P6_1_6_2", "label": "Регулярна репетиція резервування, відновлення та failover", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-9"], "swebokSection": ["§2.5"]}, "types": ["Operation"]}, "P6_1_6_3": {"comment": null, "group": "ka6op", "id": "P6_1_6_3", "label": "Тестування відновлення: зупинення сервісу, фіксація контрольної точки, запуск failover", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-9"], "swebokSection": ["§2.5"]}, "types": ["Operation"]}, "P6_1_6_4": {"comment": null, "group": "ka6op", "id": "P6_1_6_4", "label": "Упровадження автоматичних failover-демонів та логіки обробки відмов", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-9"], "swebokSection": ["§2.5"]}, "types": ["Operation"]}, "P6_1_7": {"comment": null, "group": "ka6", "id": "P6_1_7", "label": "Забезпечення безпеки, цілісності та захисту ПЗ і даних", "label_en": "Software and Data Safety, Security, Integrity, Protection, and Controls", "primaryType": "Action", "props": {"swebokPage": ["6-9"], "swebokSection": ["§2.6"]}, "types": ["Action"]}, "P6_1_7_1": {"comment": null, "group": "ka6op", "id": "P6_1_7_1", "label": "Оцінювання ризиків безпеки та доступності інформації", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-9"], "swebokSection": ["§2.6"]}, "types": ["Operation"]}, "P6_1_7_2": {"comment": null, "group": "ka6op", "id": "P6_1_7_2", "label": "Упровадження контролів a–g: політика ІБ, ролі, моніторинг, навчання, обізнаність, експертна підтримка, безпечні зміни", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-9"], "swebokSection": ["§2.6"]}, "types": ["Operation"]}, "P6_1_7_3": {"comment": null, "group": "ka6op", "id": "P6_1_7_3", "label": "Інтеграція механізмів безпеки в операційний рівень (DevSecOps)", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-9"], "swebokSection": ["§2.6"]}, "types": ["Operation"]}, "P6_2": {"comment": "Стадія: delivery", "group": "ka6", "id": "P6_2", "label": "Доставка (розгортання) операцій", "label_en": "Software Engineering Operations Delivery", "primaryType": "SubProcess", "props": {"swebokPage": ["6-9"], "swebokSection": ["§3"]}, "types": ["SubProcess"]}, "P6_2_1": {"comment": null, "group": "ka6", "id": "P6_2_1", "label": "Операційне тестування, верифікація та приймання", "label_en": "Operational Testing, Verification, and Acceptance", "primaryType": "Action", "props": {"swebokPage": ["6-9"], "swebokSection": ["§3.1"]}, "types": ["Action"]}, "P6_2_1_1": {"comment": null, "group": "ka6op", "id": "P6_2_1_1", "label": "Планування і виконання верифікації з використанням TDD", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-9"], "swebokSection": ["§3.1"]}, "types": ["Operation"]}, "P6_2_1_2": {"comment": null, "group": "ka6op", "id": "P6_2_1_2", "label": "Приймальне тестування за ATDD", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-9"], "swebokSection": ["§3.1"]}, "types": ["Operation"]}, "P6_2_1_3": {"comment": null, "group": "ka6op", "id": "P6_2_1_3", "label": "Автоматизація сервісів тестування та інтеграція інструментів (DevOps)", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-9"], "swebokSection": ["§3.1"]}, "types": ["Operation"]}, "P6_2_2": {"comment": null, "group": "ka6", "id": "P6_2_2", "label": "Інженерія розгортання та випуску", "label_en": "Deployment/Release Engineering", "primaryType": "Action", "props": {"swebokPage": ["6-10"], "swebokSection": ["§3.2"]}, "types": ["Action"]}, "P6_2_2_1": {"comment": null, "group": "ka6op", "id": "P6_2_2_1", "label": "Ідентифікація і реєстрація запитів на випуск, визначення елементів, схвалення, відстеження (release control)", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-10"], "swebokSection": ["§3.2"]}, "types": ["Operation"]}, "P6_2_2_2": {"comment": null, "group": "ka6op", "id": "P6_2_2_2", "label": "Пакування коду та генерування конфігураційних файлів", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-10"], "swebokSection": ["§3.2"]}, "types": ["Operation"]}, "P6_2_2_3": {"comment": null, "group": "ka6op", "id": "P6_2_2_3", "label": "Конфігурування серверів і баз даних, перезапуск серверів", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-10"], "swebokSection": ["§3.2"]}, "types": ["Operation"]}, "P6_2_2_4": {"comment": null, "group": "ka6op", "id": "P6_2_2_4", "label": "Інсталяція ПЗ на сервери (деінсталяція попередніх версій, каталоги, реєстр, змінні середовища, верифікація)", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-5; 6-10"], "swebokSection": ["§1.3; 3.2"]}, "types": ["Operation"]}, "P6_2_2_5": {"comment": null, "group": "ka6op", "id": "P6_2_2_5", "label": "Запуск виконання застосунку та димове тестування (smoke testing)", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-10"], "swebokSection": ["§3.2"]}, "types": ["Operation"]}, "P6_2_2_6": {"comment": null, "group": "ka6op", "id": "P6_2_2_6", "label": "Вибір стратегії випуску: середовищна (staging) або прикладна (feature toggles)", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-10"], "swebokSection": ["§3.2"]}, "types": ["Operation"]}, "P6_2_2_7": {"comment": null, "group": "ka6op", "id": "P6_2_2_7", "label": "Канаркове тестування (canary release) з періодом валідації", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-10"], "swebokSection": ["§3.2"]}, "types": ["Operation"]}, "P6_2_2_8": {"comment": null, "group": "ka6op", "id": "P6_2_2_8", "label": "Бізнес-рішення про випуск (release) функціональності користувачам", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-10"], "swebokSection": ["§3.2"]}, "types": ["Operation"]}, "P6_2_3": {"comment": null, "group": "ka6", "id": "P6_2_3", "label": "Відкат і міграція даних", "label_en": "Rollback and Data Migration", "primaryType": "Action", "props": {"swebokPage": ["6-10"], "swebokSection": ["§3.3"]}, "types": ["Action"]}, "P6_2_3_1": {"comment": null, "group": "ka6op", "id": "P6_2_3_1", "label": "Планування та репетиція відкату до розгортання нової версії", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-10"], "swebokSection": ["§3.3"]}, "types": ["Operation"]}, "P6_2_3_2": {"comment": null, "group": "ka6op", "id": "P6_2_3_2", "label": "Повернення ПЗ і бази даних до працездатного стану", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-10"], "swebokSection": ["§3.3"]}, "types": ["Operation"]}, "P6_2_3_3": {"comment": null, "group": "ka6op", "id": "P6_2_3_3", "label": "Автоматичний запуск відкату за сигналами спостереження (surveillance)", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-10"], "swebokSection": ["§3.3"]}, "types": ["Operation"]}, "P6_2_4": {"comment": null, "group": "ka6", "id": "P6_2_4", "label": "Керування змінами", "label_en": "Change Management", "primaryType": "Action", "props": {"swebokPage": ["6-11"], "swebokSection": ["§3.4"]}, "types": ["Action"]}, "P6_2_4_1": {"comment": null, "group": "ka6op", "id": "P6_2_4_1", "label": "Реєстрація і класифікація запитів на зміни (emergency, urgent, major, minor)", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-11"], "swebokSection": ["§3.4"]}, "types": ["Operation"]}, "P6_2_4_2": {"comment": null, "group": "ka6op", "id": "P6_2_4_2", "label": "Оцінювання ризику зміни та потреби у стратегії відкату", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-11"], "swebokSection": ["§3.4"]}, "types": ["Operation"]}, "P6_2_4_3": {"comment": null, "group": "ka6op", "id": "P6_2_4_3", "label": "Схвалення, упровадження та перегляд зміни; планування графіка змін", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-11"], "swebokSection": ["§3.4"]}, "types": ["Operation"]}, "P6_2_4_4": {"comment": null, "group": "ka6op", "id": "P6_2_4_4", "label": "Доставка малих незалежних одиниць змін на вимогу (DevOps)", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-11"], "swebokSection": ["§3.4"]}, "types": ["Operation"]}, "P6_2_5": {"comment": null, "group": "ka6", "id": "P6_2_5", "label": "Керування проблемами", "label_en": "Problem Management", "primaryType": "Action", "props": {"swebokPage": ["6-11"], "swebokSection": ["§3.5"]}, "types": ["Action"]}, "P6_2_5_1": {"comment": null, "group": "ka6op", "id": "P6_2_5_1", "label": "Ідентифікація та аналіз причин інцидентів і проблем", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-11"], "swebokSection": ["§3.5"]}, "types": ["Operation"]}, "P6_2_5_2": {"comment": null, "group": "ka6op", "id": "P6_2_5_2", "label": "Розслідування повторюваних проблем міждисциплінарною командою", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-11"], "swebokSection": ["§3.5"]}, "types": ["Operation"]}, "P6_2_5_3": {"comment": null, "group": "ka6op", "id": "P6_2_5_3", "label": "Моніторинг, журналювання та профілювання ПЗ і інфраструктури", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-11"], "swebokSection": ["§3.5"]}, "types": ["Operation"]}, "P6_3": {"comment": "Стадія: post-delivery", "group": "ka6", "id": "P6_3", "label": "Контроль операцій", "label_en": "Software Engineering Operations Control", "primaryType": "SubProcess", "props": {"swebokPage": ["6-11"], "swebokSection": ["§4"]}, "types": ["SubProcess"]}, "P6_3_1": {"comment": null, "group": "ka6", "id": "P6_3_1", "label": "Керування інцидентами", "label_en": "Incident Management", "primaryType": "Action", "props": {"swebokPage": ["6-11"], "swebokSection": ["§4.1"]}, "types": ["Action"]}, "P6_3_1_1": {"comment": null, "group": "ka6op", "id": "P6_3_1_1", "label": "Реєстрація інциденту", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-11"], "swebokSection": ["§4.1"]}, "types": ["Operation"]}, "P6_3_1_2": {"comment": null, "group": "ka6op", "id": "P6_3_1_2", "label": "Пріоритизація та оцінювання впливу на бізнес", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-11"], "swebokSection": ["§4.1"]}, "types": ["Operation"]}, "P6_3_1_3": {"comment": null, "group": "ka6op", "id": "P6_3_1_3", "label": "Розв'язання, ескалація та закриття інциденту", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-11"], "swebokSection": ["§4.1"]}, "types": ["Operation"]}, "P6_3_1_4": {"comment": null, "group": "ka6op", "id": "P6_3_1_4", "label": "Автоматизоване спостереження (alerts, logs) для запобігання ескалації", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-11"], "swebokSection": ["§4.1"]}, "types": ["Operation"]}, "P6_3_1_5": {"comment": null, "group": "ka6op", "id": "P6_3_1_5", "label": "Аналіз/post mortem та впровадження рішень проти повторення", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-11"], "swebokSection": ["§4.1"]}, "types": ["Operation"]}, "P6_3_2": {"comment": null, "group": "ka6", "id": "P6_3_2", "label": "Моніторинг, вимірювання, відстеження та перегляд", "label_en": "Monitor, Measure, Track, and Review", "primaryType": "Action", "props": {"swebokPage": ["6-11"], "swebokSection": ["§4.2"]}, "types": ["Action"]}, "P6_3_2_1": {"comment": null, "group": "ka6op", "id": "P6_3_2_1", "label": "Моніторинг потужності, неперервності та доступності", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-11"], "swebokSection": ["§4.2"]}, "types": ["Operation"]}, "P6_3_2_2": {"comment": null, "group": "ka6op", "id": "P6_3_2_2", "label": "Збирання KPI в реальному часі: телеметрія продукту, результати V&V, активність користувачів, ресурси", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-11"], "swebokSection": ["§4.2"]}, "types": ["Operation"]}, "P6_3_2_3": {"comment": null, "group": "ka6op", "id": "P6_3_2_3", "label": "Відстеження залежностей, несхвалених змін конфігурації, показників безпеки та стійкості", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-11"], "swebokSection": ["§4.2"]}, "types": ["Operation"]}, "P6_3_3": {"comment": null, "group": "ka6", "id": "P6_3_3", "label": "Підтримка операцій", "label_en": "Operations Support", "primaryType": "Action", "props": {"swebokPage": ["6-12"], "swebokSection": ["§4.3"]}, "types": ["Action"]}, "P6_3_3_1": {"comment": null, "group": "ka6op", "id": "P6_3_3_1", "label": "Експлуатація продукту у цільовому середовищі", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-12"], "swebokSection": ["§4.3"]}, "types": ["Operation"]}, "P6_3_3_2": {"comment": null, "group": "ka6op", "id": "P6_3_3_2", "label": "Проактивний моніторинг та швидке реагування на події", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-12"], "swebokSection": ["§4.3"]}, "types": ["Operation"]}, "P6_3_3_3": {"comment": null, "group": "ka6op", "id": "P6_3_3_3", "label": "Підтримка замовників відповідно до SLA", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-12"], "swebokSection": ["§4.3"]}, "types": ["Operation"]}, "P6_3_4": {"comment": null, "group": "ka6", "id": "P6_3_4", "label": "Звітування про операційні сервіси", "label_en": "Operations Service Reporting", "primaryType": "Action", "props": {"swebokPage": ["6-12"], "swebokSection": ["§4.4"]}, "types": ["Action"]}, "P6_3_4_1": {"comment": null, "group": "ka6op", "id": "P6_3_4_1", "label": "Визначення наявності метрик і потреби в інструментуванні", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-12"], "swebokSection": ["§4.4"]}, "types": ["Operation"]}, "P6_3_4_2": {"comment": null, "group": "ka6op", "id": "P6_3_4_2", "label": "Вибір/розроблення каркасу та інструментів вимірювання", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-12"], "swebokSection": ["§4.4"]}, "types": ["Operation"]}, "P6_3_4_3": {"comment": null, "group": "ka6op", "id": "P6_3_4_3", "label": "Формування сервісних звітів: виконання SLA, порушення безпеки, обсяг транзакцій, ресурси, інциденти, тренди, задоволеність", "label_en": null, "primaryType": "Operation", "props": {"swebokPage": ["6-12"], "swebokSection": ["§4.4"]}, "types": ["Operation"]}, "P_A": {"comment": "Скінченна послідовність інструкцій перетворення даних", "group": "prim", "id": "P_A", "label": "Алгоритм", "label_en": null, "primaryType": "PrimaryConcept", "props": {"seeAlso": ["KA 16 §3 (с. 16-6)"]}, "types": ["PrimaryConcept"]}, "P_C": {"comment": "Перетворення даних за алгоритмом на обчислювальній машині", "group": "prim", "id": "P_C", "label": "Обчислення", "label_en": null, "primaryType": "PrimaryConcept", "props": {"seeAlso": ["KA 16 §2–§4 (с. 16-3…16-10)"]}, "types": ["PrimaryConcept"]}, "P_Cost": {"comment": "Грошова міра ресурсів, витрачених на отримання результату", "group": "prim", "id": "P_Cost", "label": "Вартість", "label_en": null, "primaryType": "PrimaryConcept", "props": {"seeAlso": ["KA 15 §1 (с. 15-3)"]}, "types": ["PrimaryConcept"]}, "P_D": {"comment": "Сукупність властивостей і параметрів системи у фіксований момент часу", "group": "prim", "id": "P_D", "label": "Стан системи", "label_en": null, "primaryType": "PrimaryConcept", "props": {"seeAlso": ["Теорія систем; Л2 сл. 25"]}, "types": ["PrimaryConcept"]}, "P_G": {"comment": "Бажаний стан або область станів системи", "group": "prim", "id": "P_G", "label": "Ціль", "label_en": null, "primaryType": "PrimaryConcept", "props": {"seeAlso": ["Теорія управління; Л2 сл. 26; Л3 сл. 9"]}, "types": ["PrimaryConcept"]}, "P_H": {"comment": "Носій цілей, знань і активної діяльності у процесах", "group": "prim", "id": "P_H", "label": "Людина (суб'єкт діяльності)", "label_en": null, "primaryType": "PrimaryConcept", "props": {"seeAlso": ["Л3 сл. 6, 8; KA 16 §8 (с. 16-24)"]}, "types": ["PrimaryConcept"]}, "P_I": {"comment": "Відомості, що зменшують невизначеність стану об'єкта", "group": "prim", "id": "P_I", "label": "Інформація", "label_en": null, "primaryType": "PrimaryConcept", "props": {"seeAlso": ["Теорія інформації; Л2 сл. 22"]}, "types": ["PrimaryConcept"]}, "P_M": {"comment": "Абстрактне подання системи, що зберігає її суттєві властивості", "group": "prim", "id": "P_M", "label": "Модель", "label_en": null, "primaryType": "PrimaryConcept", "props": {"seeAlso": ["KA 18 §6 (с. 18-8); KA 11 §1 (с. 11-1)"]}, "types": ["PrimaryConcept"]}, "P_P": {"comment": "Процес впливу об'єктів один на одного, що супроводжується переміщенням енергії, речовини, інформації", "group": "prim", "id": "P_P", "label": "Взаємодія", "label_en": null, "primaryType": "PrimaryConcept", "props": {"seeAlso": ["Теорія систем; Л2 сл. 25"]}, "types": ["PrimaryConcept"]}, "P_Pr": {"comment": "Зафіксовані у часовому вимірі зміни станів системи, обумовлені внутрішніми та зовнішніми взаємодіями", "group": "prim", "id": "P_Pr", "label": "Процес", "label_en": null, "primaryType": "PrimaryConcept", "props": {"seeAlso": ["Л3 сл. 8; KA 18 §1 (с. 18-1)"]}, "types": ["PrimaryConcept"]}, "P_S": {"comment": "Множина взаємозв'язаних елементів, виокремлена із середовища, яка взаємодіє з ним як єдине ціле", "group": "prim", "id": "P_S", "label": "Система", "label_en": null, "primaryType": "PrimaryConcept", "props": {"seeAlso": ["Теорія систем; Л2 сл. 25; KA 16 §1 (с. 16-2)"]}, "types": ["PrimaryConcept"]}, "P_SetRelationFunction": {"comment": "Базові математичні структури", "group": "prim", "id": "P_SetRelationFunction", "label": "Множина, відношення, функція", "label_en": null, "primaryType": "PrimaryConcept", "props": {"seeAlso": ["KA 17 §3 (с. 17-5)"]}, "types": ["PrimaryConcept"]}, "P_U": {"comment": "Процес впливу суб'єкта управління на об'єкт управління для досягнення визначеної мети", "group": "prim", "id": "P_U", "label": "Управління", "label_en": null, "primaryType": "PrimaryConcept", "props": {"seeAlso": ["Теорія управління; Л2 сл. 26"]}, "types": ["PrimaryConcept"]}, "P_c": {"comment": "Сукупність об'єктів, зміна властивостей яких впливає на систему, і тих, чиї властивості змінюються під впливом системи", "group": "prim", "id": "P_c", "label": "Середовище", "label_en": null, "primaryType": "PrimaryConcept", "props": {"seeAlso": ["Теорія систем; Л2 сл. 25"]}, "types": ["PrimaryConcept"]}, "P_d": {"comment": "Формалізоване подання інформації, придатне для обробки", "group": "prim", "id": "P_d", "label": "Дані", "label_en": null, "primaryType": "PrimaryConcept", "props": {"seeAlso": ["KA 16 §3, §6 (с. 16-6, 16-17)"]}, "types": ["PrimaryConcept"]}, "P_e": {"comment": "Самостійна частина деякого цілого, системи", "group": "prim", "id": "P_e", "label": "Елемент", "label_en": null, "primaryType": "PrimaryConcept", "props": {"seeAlso": ["Теорія систем; Л2 сл. 25"]}, "types": ["PrimaryConcept"]}, "P_m": {"comment": "Приписування чисел властивостям об'єктів за правилами", "group": "prim", "id": "P_m", "label": "Вимірювання", "label_en": null, "primaryType": "PrimaryConcept", "props": {"seeAlso": ["KA 18 §7 (с. 18-10)"]}, "types": ["PrimaryConcept"]}, "P_r": {"comment": "Поєднання ймовірності події та її наслідків", "group": "prim", "id": "P_r", "label": "Ризик", "label_en": null, "primaryType": "PrimaryConcept", "props": {"seeAlso": ["KA 9 §2.5; KA 15 §9; Л2 сл. 30"]}, "types": ["PrimaryConcept"]}, "ProcessOntologyOfIPZ": {"comment": null, "group": "sys", "id": "ProcessOntologyOfIPZ", "label": "Онтологія процесів Oп", "label_en": null, "primaryType": "ProcessOntology", "props": {}, "types": ["ProcessOntology"]}, "T6_1": {"comment": null, "group": "ka6aux", "id": "T6_1", "label": "Контейнери та віртуалізація", "label_en": "Containers and Virtualization", "primaryType": "Tool", "props": {"swebokPage": ["6-13"], "swebokSection": ["§6.1"]}, "types": ["Tool"]}, "T6_2": {"comment": null, "group": "ka6aux", "id": "T6_2", "label": "Засоби розгортання", "label_en": "Deployment", "primaryType": "Tool", "props": {"swebokPage": ["6-13"], "swebokSection": ["§6.2"]}, "types": ["Tool"]}, "T6_3": {"comment": null, "group": "ka6aux", "id": "T6_3", "label": "Автоматизоване тестування", "label_en": "Automated Test", "primaryType": "Tool", "props": {"swebokPage": ["6-14"], "swebokSection": ["§6.3"]}, "types": ["Tool"]}, "T6_4": {"comment": null, "group": "ka6aux", "id": "T6_4", "label": "Моніторинг і телеметрія", "label_en": "Monitoring and Telemetry", "primaryType": "Tool", "props": {"swebokPage": ["6-14"], "swebokSection": ["§6.4"]}, "types": ["Tool"]}, "TaskOntologyOfIPZ": {"comment": null, "group": "sys", "id": "TaskOntologyOfIPZ", "label": "Онтологія задач Oз", "label_en": null, "primaryType": "TaskOntology", "props": {}, "types": ["TaskOntology"]}, "Union1": {"comment": null, "group": "sys", "id": "Union1", "label": "Життєвий цикл програмного забезпечення", "label_en": null, "primaryType": "SystemicUnion", "props": {"seeAlso": ["KA 10 §2 Life Cycles (с. 10-3); ISO/IEC/IEEE 12207:2017"]}, "types": ["SystemicUnion"]}, "Union2": {"comment": null, "group": "sys", "id": "Union2", "label": "DevOps / конвеєр неперервної доставки (CI/CD)", "label_en": null, "primaryType": "SystemicUnion", "props": {"seeAlso": ["KA 6 Introduction (с. 6-1…6-2); §6 Software Engineering Operations Tools (с. 6-13)"]}, "types": ["SystemicUnion"]}, "Union3": {"comment": null, "group": "sys", "id": "Union3", "label": "DevSecOps", "label_en": null, "primaryType": "SystemicUnion", "props": {"seeAlso": ["KA 6 §2.6 (с. 6-9)"]}, "types": ["SystemicUnion"]}, "Union4": {"comment": null, "group": "sys", "id": "Union4", "label": "Експлуатація та супроводження (O&M): спільний план операцій і супроводження", "label_en": null, "primaryType": "SystemicUnion", "props": {"seeAlso": ["KA 6 §2.1.1 Operations Plan (с. 6-6); ISO/IEC 20000-1:2018 [6]"]}, "types": ["SystemicUnion"]}, "Union5": {"comment": null, "group": "sys", "id": "Union5", "label": "Фундаментальний базис ІПЗ (foundation KAs)", "label_en": null, "primaryType": "SystemicUnion", "props": {"seeAlso": ["Introduction to the Guide, табл. I.1 (с. xxxix)"]}, "types": ["SystemicUnion"]}}, "ka": [{"cluster": "Oп", "id": "KA1", "n": 1}, {"cluster": "Oп", "id": "KA2", "n": 2}, {"cluster": "Oп", "id": "KA3", "n": 3}, {"cluster": "Oп", "id": "KA4", "n": 4}, {"cluster": "Oп", "id": "KA5", "n": 5}, {"cluster": "Oп", "id": "KA6", "n": 6}, {"cluster": "Oп", "id": "KA7", "n": 7}, {"cluster": "Oп", "id": "KA8", "n": 8}, {"cluster": "Oп", "id": "KA9", "n": 9}, {"cluster": "Oп", "id": "KA10", "n": 10}, {"cluster": "Oо", "id": "KA11", "n": 11}, {"cluster": "Oо", "id": "KA12", "n": 12}, {"cluster": "Oо", "id": "KA13", "n": 13}, {"cluster": "Oз", "id": "KA14", "n": 14}, {"cluster": "Oз", "id": "KA15", "n": 15}, {"cluster": "Oо", "id": "KA16", "n": 16}, {"cluster": "Oо", "id": "KA17", "n": 17}, {"cluster": "Oо", "id": "KA18", "n": 18}], "kaEdges": [{"rel": "hasInstance", "source": "KA10", "target": "KA1"}, {"rel": "hasInstance", "source": "KA10", "target": "KA2"}, {"rel": "hasInstance", "source": "KA10", "target": "KA3"}, {"rel": "hasInstance", "source": "KA10", "target": "KA4"}, {"rel": "hasInstance", "source": "KA10", "target": "KA5"}, {"rel": "hasInstance", "source": "KA10", "target": "KA6"}, {"rel": "hasInstance", "source": "KA10", "target": "KA7"}, {"rel": "hasInstance", "source": "KA10", "target": "KA8"}, {"rel": "hasInstance", "source": "KA10", "target": "KA9"}, {"rel": "hasInstance", "source": "KA11", "target": "KA1"}, {"rel": "hasInstance", "source": "KA11", "target": "KA2"}, {"rel": "hasInstance", "source": "KA11", "target": "KA3"}, {"rel": "hasInstance", "source": "KA11", "target": "KA5"}, {"rel": "isPropertyOf", "source": "KA12", "target": "KA1"}, {"rel": "isPropertyOf", "source": "KA12", "target": "KA3"}, {"rel": "isPropertyOf", "source": "KA12", "target": "KA4"}, {"rel": "isPropertyOf", "source": "KA12", "target": "KA5"}, {"rel": "isPropertyOf", "source": "KA12", "target": "KA6"}, {"rel": "isKindOf", "source": "KA13", "target": "KA12"}, {"rel": "isPropertyOf", "source": "KA13", "target": "KA3"}, {"rel": "isPropertyOf", "source": "KA13", "target": "KA5"}, {"rel": "isPropertyOf", "source": "KA13", "target": "KA6"}, {"rel": "isPropertyOf", "source": "KA14", "target": "KA9"}, {"rel": "isPropertyOf", "source": "KA15", "target": "KA14"}, {"rel": "isPropertyOf", "source": "KA15", "target": "KA9"}, {"rel": "isPartOf", "source": "KA16", "target": "KA4"}, {"rel": "isPartOf", "source": "KA16", "target": "KA6"}, {"rel": "isPartOf", "source": "KA17", "target": "KA11"}, {"rel": "isPartOf", "source": "KA17", "target": "KA16"}, {"rel": "hasInstance", "source": "KA18", "target": "KA10"}, {"rel": "hasInstance", "source": "KA18", "target": "KA3"}, {"rel": "isPartOf", "source": "KA18", "target": "KA9"}, {"rel": "isKindOf", "source": "KA2", "target": "KA3"}, {"rel": "isPartOf", "source": "KA8", "target": "KA6"}, {"rel": "isPartOf", "source": "KA8", "target": "KA9"}], "lpm": {"edges": [{"rel": "isKindOf", "source": "B_Af", "target": "P_M"}, {"rel": "isKindOf", "source": "B_Af", "target": "P_d"}, {"rel": "isPartOf", "source": "B_Af", "target": "B_Cfg"}, {"rel": "isPartOf", "source": "B_Af", "target": "KA1"}, {"rel": "isPartOf", "source": "B_Af", "target": "KA2"}, {"rel": "isPartOf", "source": "B_Af", "target": "KA3"}, {"rel": "isPartOf", "source": "B_Af", "target": "KA4"}, {"rel": "isPartOf", "source": "B_Af", "target": "KA5"}, {"rel": "isPartOf", "source": "B_Af", "target": "KA8"}, {"rel": "isPartOf", "source": "B_Cfg", "target": "KA6"}, {"rel": "isPartOf", "source": "B_Cfg", "target": "KA8"}, {"rel": "isPartOf", "source": "B_Ef", "target": "KA15"}, {"rel": "isPropertyOf", "source": "B_Ef", "target": "B_PI"}, {"rel": "isKindOf", "source": "B_Eng", "target": "P_H"}, {"rel": "isPartOf", "source": "B_Eng", "target": "KA9"}, {"rel": "isPropertyOf", "source": "B_Eng", "target": "KA14"}, {"rel": "isPartOf", "source": "B_LC", "target": "KA10"}, {"rel": "isKindOf", "source": "B_Mt", "target": "P_M"}, {"rel": "isPartOf", "source": "B_Mt", "target": "B_PI"}, {"rel": "isPartOf", "source": "B_Mt", "target": "KA2"}, {"rel": "isPartOf", "source": "B_Mt", "target": "KA3"}, {"rel": "isPartOf", "source": "B_Mt", "target": "KA5"}, {"rel": "isKindOf", "source": "B_OE", "target": "P_c"}, {"rel": "isPartOf", "source": "B_OE", "target": "KA16"}, {"rel": "isPartOf", "source": "B_OE", "target": "KA6"}, {"rel": "isKindOf", "source": "B_PI", "target": "P_Pr"}, {"rel": "isPartOf", "source": "B_PI", "target": "B_LC"}, {"rel": "isPropertyOf", "source": "B_PI", "target": "B_Eng"}, {"rel": "isKindOf", "source": "B_Pj", "target": "B_PI"}, {"rel": "isPartOf", "source": "B_Pj", "target": "KA9"}, {"rel": "isPropertyOf", "source": "B_Q", "target": "B_SP"}, {"rel": "isPropertyOf", "source": "B_Q", "target": "KA1"}, {"rel": "isPropertyOf", "source": "B_Q", "target": "KA3"}, {"rel": "isPropertyOf", "source": "B_Q", "target": "KA4"}, {"rel": "isPropertyOf", "source": "B_Q", "target": "KA5"}, {"rel": "isPropertyOf", "source": "B_Q", "target": "KA6"}, {"rel": "isPartOf", "source": "B_Rq", "target": "KA1"}, {"rel": "isPartOf", "source": "B_Rq", "target": "KA3"}, {"rel": "isPartOf", "source": "B_Rq", "target": "KA7"}, {"rel": "isPropertyOf", "source": "B_Rq", "target": "B_Q"}, {"rel": "isPropertyOf", "source": "B_Rq", "target": "B_SP"}, {"rel": "isPropertyOf", "source": "B_Rq", "target": "B_Std"}, {"rel": "isKindOf", "source": "B_SH", "target": "P_H"}, {"rel": "isPartOf", "source": "B_SH", "target": "KA1"}, {"rel": "isPartOf", "source": "B_SH", "target": "KA2"}, {"rel": "isPropertyOf", "source": "B_SH", "target": "B_Rq"}, {"rel": "isKindOf", "source": "B_SP", "target": "B_SW"}, {"rel": "isPartOf", "source": "B_SP", "target": "KA7"}, {"rel": "isPropertyOf", "source": "B_SP", "target": "B_PI"}, {"rel": "isKindOf", "source": "B_SW", "target": "P_S"}, {"rel": "isPartOf", "source": "B_SW", "target": "B_Cfg"}, {"rel": "isPartOf", "source": "B_SW", "target": "B_OE"}, {"rel": "isKindOf", "source": "B_Sec", "target": "B_Q"}, {"rel": "isPropertyOf", "source": "B_Sec", "target": "KA3"}, {"rel": "isPropertyOf", "source": "B_Sec", "target": "KA5"}, {"rel": "isPropertyOf", "source": "B_Sec", "target": "KA6"}, {"rel": "isKindOf", "source": "B_Std", "target": "P_I"}, {"rel": "isPartOf", "source": "B_Std", "target": "KA10"}, {"rel": "isPartOf", "source": "B_Std", "target": "KA14"}, {"rel": "isPartOf", "source": "B_Std", "target": "KA18"}, {"rel": "isPartOf", "source": "B_Std", "target": "KA4"}, {"rel": "isPartOf", "source": "B_Sv", "target": "KA6"}, {"rel": "isPartOf", "source": "B_Sv", "target": "KA7"}, {"rel": "systemicUnionOf", "source": "B_Sv", "target": "B_OE"}, {"rel": "systemicUnionOf", "source": "B_Sv", "target": "B_Q"}, {"rel": "systemicUnionOf", "source": "B_Sv", "target": "B_SP"}, {"rel": "isKindOf", "source": "B_T", "target": "B_SW"}, {"rel": "isPartOf", "source": "B_T", "target": "B_PI"}, {"rel": "isPartOf", "source": "B_T", "target": "KA4"}, {"rel": "isPartOf", "source": "B_T", "target": "KA5"}, {"rel": "isPartOf", "source": "B_T", "target": "KA6"}, {"rel": "isPartOf", "source": "B_T", "target": "KA8"}, {"rel": "isKindOf", "source": "KA1", "target": "B_PI"}, {"rel": "hasInstance", "source": "KA10", "target": "KA1"}, {"rel": "hasInstance", "source": "KA10", "target": "KA2"}, {"rel": "hasInstance", "source": "KA10", "target": "KA3"}, {"rel": "hasInstance", "source": "KA10", "target": "KA4"}, {"rel": "hasInstance", "source": "KA10", "target": "KA5"}, {"rel": "hasInstance", "source": "KA10", "target": "KA6"}, {"rel": "hasInstance", "source": "KA10", "target": "KA7"}, {"rel": "hasInstance", "source": "KA10", "target": "KA8"}, {"rel": "hasInstance", "source": "KA10", "target": "KA9"}, {"rel": "isKindOf", "source": "KA10", "target": "B_PI"}, {"rel": "hasInstance", "source": "KA11", "target": "KA1"}, {"rel": "hasInstance", "source": "KA11", "target": "KA2"}, {"rel": "hasInstance", "source": "KA11", "target": "KA3"}, {"rel": "hasInstance", "source": "KA11", "target": "KA5"}, {"rel": "isKindOf", "source": "KA11", "target": "B_Mt"}, {"rel": "isKindOf", "source": "KA11", "target": "P_M"}, {"rel": "isKindOf", "source": "KA12", "target": "B_Q"}, {"rel": "isPropertyOf", "source": "KA12", "target": "KA1"}, {"rel": "isPropertyOf", "source": "KA12", "target": "KA3"}, {"rel": "isPropertyOf", "source": "KA12", "target": "KA4"}, {"rel": "isPropertyOf", "source": "KA12", "target": "KA5"}, {"rel": "isPropertyOf", "source": "KA12", "target": "KA6"}, {"rel": "isKindOf", "source": "KA13", "target": "B_Sec"}, {"rel": "isKindOf", "source": "KA13", "target": "KA12"}, {"rel": "isPropertyOf", "source": "KA13", "target": "KA3"}, {"rel": "isPropertyOf", "source": "KA13", "target": "KA5"}, {"rel": "isPropertyOf", "source": "KA13", "target": "KA6"}, {"rel": "isPropertyOf", "source": "KA14", "target": "KA9"}, {"rel": "isPropertyOf", "source": "KA15", "target": "KA14"}, {"rel": "isPropertyOf", "source": "KA15", "target": "KA9"}, {"rel": "isPartOf", "source": "KA16", "target": "KA4"}, {"rel": "isPartOf", "source": "KA16", "target": "KA6"}, {"rel": "isPartOf", "source": "KA17", "target": "KA11"}, {"rel": "isPartOf", "source": "KA17", "target": "KA16"}, {"rel": "hasInstance", "source": "KA18", "target": "KA10"}, {"rel": "hasInstance", "source": "KA18", "target": "KA3"}, {"rel": "isPartOf", "source": "KA18", "target": "KA9"}, {"rel": "isKindOf", "source": "KA2", "target": "B_PI"}, {"rel": "isKindOf", "source": "KA2", "target": "KA3"}, {"rel": "isKindOf", "source": "KA3", "target": "B_PI"}, {"rel": "isKindOf", "source": "KA4", "target": "B_PI"}, {"rel": "isKindOf", "source": "KA5", "target": "B_PI"}, {"rel": "isKindOf", "source": "KA6", "target": "B_PI"}, {"rel": "isKindOf", "source": "KA7", "target": "B_PI"}, {"rel": "isKindOf", "source": "KA8", "target": "B_PI"}, {"rel": "isPartOf", "source": "KA8", "target": "KA6"}, {"rel": "isPartOf", "source": "KA8", "target": "KA9"}, {"rel": "isKindOf", "source": "KA9", "target": "B_PI"}, {"rel": "isKindOf", "source": "KA9", "target": "P_U"}, {"rel": "isPartOf", "source": "P_A", "target": "B_SW"}, {"rel": "isPartOf", "source": "P_A", "target": "KA16"}, {"rel": "isPartOf", "source": "P_C", "target": "KA16"}, {"rel": "isPartOf", "source": "P_Cost", "target": "KA15"}, {"rel": "isPartOf", "source": "P_Cost", "target": "KA9"}, {"rel": "isPropertyOf", "source": "P_Cost", "target": "B_Ef"}, {"rel": "isPropertyOf", "source": "P_D", "target": "B_Cfg"}, {"rel": "isPropertyOf", "source": "P_D", "target": "B_LC"}, {"rel": "isPropertyOf", "source": "P_G", "target": "B_PI"}, {"rel": "isPropertyOf", "source": "P_G", "target": "B_SH"}, {"rel": "isPropertyOf", "source": "P_H", "target": "B_PI"}, {"rel": "isPartOf", "source": "P_M", "target": "KA18"}, {"rel": "isPartOf", "source": "P_P", "target": "KA14"}, {"rel": "isPartOf", "source": "P_Pr", "target": "KA18"}, {"rel": "isPartOf", "source": "P_SetRelationFunction", "target": "KA17"}, {"rel": "isPartOf", "source": "P_d", "target": "B_SW"}, {"rel": "isPartOf", "source": "P_d", "target": "KA16"}, {"rel": "isPartOf", "source": "P_e", "target": "B_Cfg"}, {"rel": "isPartOf", "source": "P_m", "target": "KA15"}, {"rel": "isPartOf", "source": "P_m", "target": "KA18"}, {"rel": "isPartOf", "source": "P_m", "target": "KA9"}, {"rel": "isPartOf", "source": "P_r", "target": "KA15"}, {"rel": "isPartOf", "source": "P_r", "target": "KA9"}], "layerOf": {"B_Af": 1, "B_Cfg": 1, "B_Ef": 1, "B_Eng": 1, "B_LC": 1, "B_Mt": 1, "B_OE": 1, "B_PI": 1, "B_Pj": 1, "B_Q": 1, "B_Rq": 1, "B_SH": 1, "B_SP": 1, "B_SW": 1, "B_Sec": 1, "B_Std": 1, "B_Sv": 1, "B_T": 1, "KA1": 2, "KA10": 2, "KA11": 2, "KA12": 2, "KA13": 2, "KA14": 2, "KA15": 2, "KA16": 2, "KA17": 2, "KA18": 2, "KA2": 2, "KA3": 2, "KA4": 2, "KA5": 2, "KA6": 2, "KA7": 2, "KA8": 2, "KA9": 2, "P_A": 0, "P_C": 0, "P_Cost": 0, "P_D": 0, "P_G": 0, "P_H": 0, "P_I": 0, "P_M": 0, "P_P": 0, "P_Pr": 0, "P_S": 0, "P_SetRelationFunction": 0, "P_U": 0, "P_c": 0, "P_d": 0, "P_e": 0, "P_m": 0, "P_r": 0}, "layers": [{"ids": ["P_A", "P_C", "P_Cost", "P_D", "P_G", "P_H", "P_I", "P_M", "P_P", "P_Pr", "P_S", "P_SetRelationFunction", "P_U", "P_c", "P_d", "P_e", "P_m", "P_r"], "label": "Первинні"}, {"ids": ["B_Af", "B_Cfg", "B_Ef", "B_Eng", "B_LC", "B_Mt", "B_OE", "B_PI", "B_Pj", "B_Q", "B_Rq", "B_SH", "B_SP", "B_SW", "B_Sec", "B_Std", "B_Sv", "B_T"], "label": "Базові"}, {"ids": ["KA1", "KA2", "KA3", "KA4", "KA5", "KA6", "KA7", "KA8", "KA9", "KA10", "KA11", "KA12", "KA13", "KA14", "KA15", "KA16", "KA17", "KA18"], "label": "Похідні (KA)"}]}, "meta": {"comment": "Онтологія O = (X, R, F, A): X — класи та індивіди; R — об'єктні властивості (УЗ ЛПМ); F — анотації rdfs:label/rdfs:comment/rdfs:seeAlso; A — аксіоми. В OWL виражено: A1 (диз'юнктність складових Ос, функціональність belongsTo, еквівалентність класів KA обмеженням belongsTo), A2 (транзитивність а, х). A3 (ациклічність) і A6 (деревоподібність) перевіряє ontology/check.py: OWL 2 DL забороняє асиметричність і обмеження кардинальності на транзитивних властивостях.", "label": "Системна онтологія ІПЗ на основі SWEBOK Guide v4.0", "source": "Guide to the Software Engineering Body of Knowledge, Version 4.0 / ed. H. Washizaki. IEEE Computer Society, 2024.", "version": "1.1 (2026-09-24)"}, "partOfChildren": {"KA6": ["P6_1", "P6_2", "P6_3", "F6_3", "F6_4", "F6_5", "F6_6"], "P6_1": ["P6_1_1", "P6_1_2", "P6_1_3", "P6_1_4", "P6_1_5", "P6_1_6", "P6_1_7"], "P6_1_1": ["P6_1_1_1", "P6_1_1_2", "P6_1_1_3", "P6_1_1_4", "P6_1_1_5"], "P6_1_2": ["P6_1_2_1", "P6_1_2_2"], "P6_1_3": ["P6_1_3_1", "P6_1_3_2", "P6_1_3_3"], "P6_1_4": ["P6_1_4_1", "P6_1_4_2", "P6_1_4_3", "P6_1_4_4"], "P6_1_5": ["P6_1_5_1", "P6_1_5_2", "P6_1_5_3"], "P6_1_6": ["P6_1_6_1", "P6_1_6_2", "P6_1_6_3", "P6_1_6_4"], "P6_1_7": ["P6_1_7_1", "P6_1_7_2", "P6_1_7_3"], "P6_2": ["P6_2_1", "P6_2_2", "P6_2_3", "P6_2_4", "P6_2_5"], "P6_2_1": ["P6_2_1_1", "P6_2_1_2", "P6_2_1_3"], "P6_2_2": ["P6_2_2_1", "P6_2_2_2", "P6_2_2_3", "P6_2_2_4", "P6_2_2_5", "P6_2_2_6", "P6_2_2_7", "P6_2_2_8"], "P6_2_3": ["P6_2_3_1", "P6_2_3_2", "P6_2_3_3"], "P6_2_4": ["P6_2_4_1", "P6_2_4_2", "P6_2_4_3", "P6_2_4_4"], "P6_2_5": ["P6_2_5_1", "P6_2_5_2", "P6_2_5_3"], "P6_3": ["P6_3_1", "P6_3_2", "P6_3_3", "P6_3_4"], "P6_3_1": ["P6_3_1_1", "P6_3_1_2", "P6_3_1_3", "P6_3_1_4", "P6_3_1_5"], "P6_3_2": ["P6_3_2_1", "P6_3_2_2", "P6_3_2_3"], "P6_3_3": ["P6_3_3_1", "P6_3_3_2", "P6_3_3_3"], "P6_3_4": ["P6_3_4_1", "P6_3_4_2", "P6_3_4_3"]}, "propLabel": {"hasEnvironment": "Середовище / керування (C)", "hasGoal": "Мета", "hasIndicator": "Показник", "hasInput": "Вхід (I)", "hasMechanism": "Механізм (M)", "hasMetric": "Метрика", "hasOutput": "Вихід (O)", "hasTechnology": "Технологія", "kaNumber": "Номер KA", "lpmFormula": "Формула ЛПМ", "notation": "Позначення в роботі", "seeAlso": "Джерело", "swebokPage": "Сторінка SWEBOK", "swebokSection": "Розділ SWEBOK"}, "relTypes": ["appliesTo", "belongsTo", "hasEnvironmentFrom", "hasInputFrom", "hasInstance", "hasMechanismFrom", "isKindOf", "isPartOf", "isPropertyOf", "systemicUnionOf", "usedIn"], "stats": {"classes": 25, "edges": 287, "individuals": 152, "kaEdges": 35, "triples": 1371}, "uz": {"hasInstance": {"color": "#0f8fa0", "letter": "к"}, "isKindOf": {"color": "#d23c5a", "letter": "х"}, "isPartOf": {"color": "#b58000", "letter": "а"}, "isPropertyOf": {"color": "#6a4fb5", "letter": "о"}, "systemicUnionOf": {"color": "#57606a", "letter": "s"}}};
+const IND = DATA.individuals;
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+function uzOf(rel) { return DATA.uz[rel] || null; }
+function relColor(rel) { const u = uzOf(rel); return u ? u.color : css('--muted'); }
+function relLetter(rel) { const u = uzOf(rel); return u ? u.letter : ''; }
+const groupById = {}; DATA.groups.forEach(g => groupById[g.id] = g);
+function groupColor(gid) { return (groupById[gid] || {}).color || css('--muted'); }
+function srcBadge(p) {
+  if (!p || !p.swebokSection) return '';
+  const sec = p.swebokSection[0].replace(/^Chapter\s+/, 'гл. ');
+  return sec + (p.swebokPage ? ', с. ' + p.swebokPage[0] : '');
+}
+
+// ---------- header ----------
+document.getElementById('title').textContent = DATA.meta.label || 'Онтологія ІПЗ';
+document.getElementById('stats').textContent =
+  `${DATA.stats.classes} класів · ${DATA.stats.individuals} індивідів · ` +
+  `${DATA.stats.edges} об'єктних зв'язків · ${DATA.stats.triples} трійок RDF`;
+document.getElementById('footer').textContent =
+  (DATA.meta.source || '') + (DATA.meta.version ? ('  ·  версія ' + DATA.meta.version) : '') +
+  '  ·  згенеровано ontology/visualize.py з ontology/ipz-swebok-v4.ttl';
+
+// ---------- state in URL hash ----------
+const state = {view: 'ka', node: null};
+function readHash() {
+  const h = new URLSearchParams(location.hash.slice(1));
+  if (h.get('view') && document.getElementById('view-' + h.get('view'))) state.view = h.get('view');
+  state.node = h.get('node');
+}
+function writeHash() {
+  const h = new URLSearchParams({view: state.view});
+  if (state.node) h.set('node', state.node);
+  history.replaceState(null, '', '#' + h.toString());
+}
+
+// ---------- tabs ----------
+function showView(v) {
+  state.view = v;
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.view === v));
+  document.querySelectorAll('.view').forEach(s => s.classList.toggle('active', s.id === 'view-' + v));
+  if (v === 'net') requestAnimationFrame(resizeCanvas);
+  writeHash();
+}
+document.querySelectorAll('nav button').forEach(btn =>
+  btn.addEventListener('click', () => showView(btn.dataset.view)));
+
+// ---------- detail panel ----------
+function showDetail(id) {
+  const info = IND[id];
+  const body = document.getElementById('detail-body');
+  if (!info) {
+    const c = DATA.classes[id];
+    if (!c) return;
+    const inst = Object.values(IND).filter(i => i.types.includes(id));
+    let html = `<h2>${esc(c.label)}</h2>`;
+    if (c.label_en) html += `<div class="en">${esc(c.label_en)}</div>`;
+    html += `<span class="type">owl:Class</span><dl><dt>ID</dt><dd><code>swe:${esc(c.id)}</code></dd>`;
+    if (c.comment) html += `<dt>Опис</dt><dd>${esc(c.comment)}</dd>`;
+    if (c.parents.length) html += `<dt>rdfs:subClassOf</dt><dd>${c.parents.map(esc).join(', ')}</dd>`;
+    if (inst.length) html += `<dt>Індивіди (${inst.length})</dt><dd class="rel-list">` +
+      inst.map(i => `<a data-id="${esc(i.id)}">${esc(i.label)}</a>`).join('') + `</dd>`;
+    html += `</dl>`;
+    body.innerHTML = html;
+  } else {
+    let html = `<h2>${esc(info.label)}</h2>`;
+    if (info.label_en) html += `<div class="en">${esc(info.label_en)}</div>`;
+    html += `<span class="type" style="background:${groupColor(info.group)}">${esc(info.types.join(', ') || info.primaryType)}</span>`;
+    html += `<dl><dt>ID</dt><dd><code>swe:${esc(info.id)}</code></dd>`;
+    if (info.comment) html += `<dt>Опис</dt><dd>${esc(info.comment)}</dd>`;
+    const keys = Object.keys(info.props).sort((a, b) => {
+      const o = Object.keys(DATA.propLabel);
+      return (o.indexOf(a) + 1 || 99) - (o.indexOf(b) + 1 || 99) || a.localeCompare(b);
+    });
+    keys.forEach(k => {
+      html += `<dt>${esc(DATA.propLabel[k] || k)}</dt><dd>${info.props[k].map(esc).join('; ')}</dd>`;
+    });
+    const rel = (e, other, out) => {
+      const l = relLetter(e.rel);
+      const badge = l ? `<b style="color:${relColor(e.rel)}">${esc(l)}</b> ` : '';
+      return `<a data-id="${esc(other)}">${badge}${out ? esc(e.rel) + ' → ' + esc(IND[other].label)
+                                                        : esc(IND[other].label) + ' → ' + esc(e.rel)}</a>`;
+    };
+    const outE = DATA.edges.filter(e => e.source === id), inE = DATA.edges.filter(e => e.target === id);
+    if (outE.length) html += `<dt>Вихідні зв'язки (${outE.length})</dt><dd class="rel-list">` + outE.map(e => rel(e, e.target, true)).join('') + `</dd>`;
+    if (inE.length) html += `<dt>Вхідні зв'язки (${inE.length})</dt><dd class="rel-list">` + inE.map(e => rel(e, e.source, false)).join('') + `</dd>`;
+    html += `</dl>`;
+    body.innerHTML = html;
+  }
+  body.querySelectorAll('a[data-id]').forEach(a => a.addEventListener('click', () => select(a.dataset.id)));
+  document.getElementById('detail').classList.add('show');
+}
+function select(id) {
+  state.node = id;
+  showDetail(id);
+  if (nodeById[id]) {
+    selected = nodeById[id];
+    ensureVisible(selected);
+    if (state.view === 'net') centerOn(selected);
+    draw();
+  }
+  highlightTreeRow(id);
+  lpmSelect(id);
+  writeHash();
+}
+function unselect() {
+  state.node = null; selected = null;
+  document.getElementById('detail').classList.remove('show');
+  highlightTreeRow(null);
+  lpmSelect(null);
+  draw(); writeHash();
+}
+document.getElementById('detail-close').addEventListener('click', unselect);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') unselect(); });
+
+// ---------- tree renderer ----------
+function renderTree(container, roots, childrenOf, nodeInfo) {
+  const ul = document.createElement('ul');
+  roots.forEach(id => ul.appendChild(buildLi(id, 0)));
+  container.appendChild(ul);
+
+  function buildLi(id, depth) {
+    const kids = childrenOf(id) || [];
+    const li = document.createElement('li');
+    const info = nodeInfo(id);
+    if (kids.length && depth >= 1) li.classList.add('collapsed');
+    const row = document.createElement('div');
+    row.className = 'node-row';
+    row.dataset.id = id;
+    const toggle = document.createElement('span');
+    toggle.className = 'toggle';
+    toggle.textContent = kids.length ? (li.classList.contains('collapsed') ? '▸' : '▾') : '·';
+    row.appendChild(toggle);
+    row.insertAdjacentHTML('beforeend',
+      `<span class="tag">${esc(id)}</span><span>${esc(info.label)}</span>` +
+      (info.label_en ? `<span class="en">(${esc(info.label_en)})</span>` : '') +
+      (info.count ? `<span class="cnt">(${info.count})</span>` : '') +
+      (info.src ? `<span class="src">${esc(info.src)}</span>` : ''));
+    row.title = info.comment || '';
+    li.appendChild(row);
+    if (kids.length) {
+      const childUl = document.createElement('ul');
+      kids.forEach(k => childUl.appendChild(buildLi(k, depth + 1)));
+      li.appendChild(childUl);
+      toggle.addEventListener('click', ev => {
+        ev.stopPropagation();
+        li.classList.toggle('collapsed');
+        toggle.textContent = li.classList.contains('collapsed') ? '▸' : '▾';
+      });
+    }
+    row.addEventListener('click', () => select(id));
+    return li;
+  }
+}
+function setAll(containerId, collapsed) {
+  document.querySelectorAll('#' + containerId + ' li').forEach(li => {
+    if (!li.querySelector(':scope > ul')) return;
+    li.classList.toggle('collapsed', collapsed);
+    li.querySelector(':scope > .node-row .toggle').textContent = collapsed ? '▸' : '▾';
+  });
+}
+document.querySelectorAll('[data-expand]').forEach(b => b.addEventListener('click', () => setAll(b.dataset.expand, false)));
+document.querySelectorAll('[data-collapse]').forEach(b => b.addEventListener('click', () => setAll(b.dataset.collapse, true)));
+function highlightTreeRow(id) {
+  document.querySelectorAll('.node-row.sel').forEach(r => r.classList.remove('sel'));
+  if (!id) return;
+  document.querySelectorAll(`.node-row[data-id="${CSS.escape(id)}"]`).forEach(r => {
+    r.classList.add('sel');
+    for (let li = r.parentElement.parentElement.closest('li'); li; li = li.parentElement.closest('li')) {
+      li.classList.remove('collapsed');
+      li.querySelector(':scope > .node-row .toggle').textContent = '▾';
+    }
+  });
+}
+
+// classes tree
+(function(){
+  const childrenMap = {};
+  Object.values(DATA.classes).forEach(c => c.parents.forEach(p => (childrenMap[p] = childrenMap[p] || []).push(c.id)));
+  const count = {};
+  Object.values(IND).forEach(i => i.types.forEach(t => count[t] = (count[t] || 0) + 1));
+  const roots = Object.values(DATA.classes).filter(c => c.parents.length === 0).map(c => c.id);
+  renderTree(document.getElementById('tree-classes'), roots, id => childrenMap[id],
+    id => Object.assign({count: count[id]}, DATA.classes[id]));
+})();
+
+// KA6 decomposition tree
+(function(){
+  const container = document.getElementById('tree-ka6');
+  if (!IND['KA6']) { container.textContent = 'Немає даних (KA6 не знайдено).'; return; }
+  renderTree(container, ['KA6'], id => DATA.partOfChildren[id],
+    id => { const i = IND[id] || {label: id}; return Object.assign({src: srcBadge(i.props)}, i); });
+})();
+
+let lpmSelect = () => {};
+
+// ---------- 18 KA view ----------
+const UZ_NAME = {'о': 'ознака', 'а': 'складова', 'х': 'різновид', 'к': 'клас', 's': 'поєднання'};
+const CL_NAME = {'Oп': 'процеси', 'Oо': "об'єкти", 'Oз': 'задачі'};
+const CL_COLOR = {}; Object.values(DATA.clusters).forEach(c => CL_COLOR[c.label] = c.color);
+const CL_ORDER = ['Oп', 'Oо', 'Oз'];
+const KA_ORDER = CL_ORDER.flatMap(c => DATA.ka.filter(k => k.cluster === c));
+let kaFocus = () => {};
+
+(function(){
+  const svg = document.getElementById('ka-svg');
+  const NS = 'http://www.w3.org/2000/svg';
+  const R = 220, NODE_R = 14, BAND = NODE_R + 5, LABEL_GAP = 7, LINE_H = 13.5, FONT = 11.5;
+  const GAP = 1.5;  // проміжок між кластерами, у кроках між вершинами
+  const steps = KA_ORDER.length + GAP * CL_ORDER.length;
+  const ang = s => -Math.PI / 2 + (s / steps) * 2 * Math.PI;
+  const pos = {}, clusters = [];
+  let s = 0;
+  CL_ORDER.forEach(c => {
+    const list = KA_ORDER.filter(k => k.cluster === c);
+    const first = s;
+    list.forEach(k => { const a = ang(s); pos[k.id] = {x: R * Math.cos(a), y: R * Math.sin(a), a}; s += 1; });
+    clusters.push({c, a0: ang(first), a1: ang(s - 1)});
+    s += GAP;
+  });
+  const el = (tag, attrs, parent) => {
+    const e = document.createElementNS(NS, tag);
+    Object.entries(attrs).forEach(([k, v]) => e.setAttribute(k, v));
+    (parent || svg).appendChild(e);
+    return e;
+  };
+
+  const defs = el('defs', {});
+  const marker = {};
+  Object.values(DATA.uz).forEach(u => {
+    if (marker[u.letter]) return;
+    const id = 'arr' + Object.keys(marker).length;
+    const m = el('marker', {id, viewBox: '0 0 10 10', refX: 8.5, refY: 5, markerWidth: 9, markerHeight: 9,
+      orient: 'auto-start-reverse', markerUnits: 'userSpaceOnUse'}, defs);
+    el('path', {d: 'M0,0.5 L10,5 L0,9.5 z', fill: u.color}, m);
+    marker[u.letter] = id;
+  });
+
+  // кластери — «намистини»: смуга по самому кільцю під вершинами, а не окрема дуга поруч із підписами
+  const bands = el('g', {});
+  clusters.forEach(cl => {
+    const p = a => `${R * Math.cos(a)},${R * Math.sin(a)}`;
+    const d = cl.a1 - cl.a0 < 1e-6 ? `M${p(cl.a0)} L${p(cl.a0 + 1e-4)}`
+      : `M${p(cl.a0)} A${R},${R} 0 ${cl.a1 - cl.a0 > Math.PI ? 1 : 0} 1 ${p(cl.a1)}`;
+    el('path', {class: 'band', d, stroke: CL_COLOR[cl.c], 'stroke-width': 2 * BAND}, bands);
+  });
+
+  // ребра: кривизна залежить від кутової відстані — сусіди з'єднуються пологою дугою,
+  // далекі проходять ближче до центру, але не сходяться в одну точку
+  const edgeLayer = el('g', {}), badgeLayer = el('g', {});
+  const edgeEls = [];
+  const trim = (p, q, r) => { const d = Math.hypot(q.x - p.x, q.y - p.y) || 1; return {x: p.x + (q.x - p.x) * r / d, y: p.y + (q.y - p.y) * r / d}; };
+  DATA.kaEdges.forEach(e => {
+    const a = pos[e.source], b = pos[e.target], u = DATA.uz[e.rel];
+    let da = Math.abs(a.a - b.a); if (da > Math.PI) da = 2 * Math.PI - da;
+    const f = 0.8 - 0.5 * (da / Math.PI);
+    const c = {x: (a.x + b.x) / 2 * f, y: (a.y + b.y) / 2 * f};
+    const p0 = trim(a, c, NODE_R + 2), p2 = trim(b, c, NODE_R + 2);
+    const d = `M${p0.x},${p0.y} Q${c.x},${c.y} ${p2.x},${p2.y}`;
+    const g = el('g', {class: 'kaedge'}, edgeLayer);
+    g.dataset.s = e.source; g.dataset.t = e.target;
+    el('path', {class: 'vis', d, stroke: u.color, 'marker-end': `url(#${marker[u.letter]})`}, g);
+    const hit = el('path', {class: 'hit', d}, g);
+    const tt = el('title', {}, hit);
+    tt.textContent = `${IND[e.source].label} —${u.letter}→ ${IND[e.target].label}  (${UZ_NAME[u.letter] || ''}, swe:${e.rel})`;
+    hit.addEventListener('mouseenter', () => kaFocus(null, [e.source, e.target]));
+    hit.addEventListener('mouseleave', () => kaFocus(null, null));
+    hit.addEventListener('click', () => select(e.source));
+    const bx = .25 * p0.x + .5 * c.x + .25 * p2.x, by = .25 * p0.y + .5 * c.y + .25 * p2.y;
+    const badge = el('g', {class: 'badge'}, badgeLayer);
+    badge.dataset.s = e.source; badge.dataset.t = e.target;
+    el('circle', {cx: bx, cy: by, r: 8, stroke: u.color}, badge);
+    const t = el('text', {x: bx, y: by + .5, fill: u.color}, badge);
+    t.textContent = u.letter;
+    edgeEls.push({g, badge});
+  });
+
+  // вершини й підписи (2 рядки, збалансований перенос — без обрізання)
+  function wrap(str) {
+    if (str.length <= 16) return [str];
+    const w = str.split(' ');
+    let best = [str], cost = Infinity;
+    for (let i = 1; i < w.length; i++) {
+      const l1 = w.slice(0, i).join(' '), l2 = w.slice(i).join(' ');
+      const c = Math.max(l1.length, l2.length);
+      if (c < cost) { cost = c; best = [l1, l2]; }
+    }
+    return best;
+  }
+  const mctx = document.createElement('canvas').getContext('2d');
+  mctx.font = `${FONT}px ${getComputedStyle(document.body).fontFamily}`;
+  const bb = {x0: -R - BAND, y0: -R - BAND, x1: R + BAND, y1: R + BAND};
+  const nodeEls = {};
+  const nodeLayer = el('g', {});
+  KA_ORDER.forEach(k => {
+    const p = pos[k.id];
+    const g = el('g', {class: 'kanode'}, nodeLayer);
+    el('circle', {cx: p.x, cy: p.y, r: NODE_R, stroke: CL_COLOR[k.cluster]}, g);
+    const n = el('text', {class: 'num', x: p.x, y: p.y + .5, 'text-anchor': 'middle', 'dominant-baseline': 'central'}, g);
+    n.textContent = k.n;
+    const cos = Math.cos(p.a), sin = Math.sin(p.a), rr = R + BAND + LABEL_GAP;
+    const lx = cos * rr, ly = sin * rr;
+    const lines = wrap(IND[k.id].label);
+    const vertical = Math.abs(cos) < 0.12;
+    const anchor = vertical ? 'middle' : (cos > 0 ? 'start' : 'end');
+    // базова лінія першого рядка
+    const y0 = vertical ? (sin < 0 ? ly - (lines.length - 1) * LINE_H : ly + FONT)
+                        : ly - (lines.length - 1) * LINE_H / 2 + FONT * 0.35;
+    const lab = el('text', {class: 'lab', 'text-anchor': anchor}, g);
+    lines.forEach((line, i) => {
+      const ts = el('tspan', {x: lx, y: y0 + i * LINE_H}, lab);
+      ts.textContent = line;
+      const w = mctx.measureText(line).width;
+      const xa = anchor === 'start' ? lx : anchor === 'end' ? lx - w : lx - w / 2;
+      bb.x0 = Math.min(bb.x0, xa); bb.x1 = Math.max(bb.x1, xa + w);
+      bb.y0 = Math.min(bb.y0, y0 + i * LINE_H - FONT); bb.y1 = Math.max(bb.y1, y0 + i * LINE_H + 4);
+    });
+    const tt = el('title', {}, g); tt.textContent = `KA ${k.n}. ${IND[k.id].label} (${k.cluster} · ${CL_NAME[k.cluster]})`;
+    g.addEventListener('mouseenter', () => kaFocus(k.id, null));
+    g.addEventListener('mouseleave', () => kaFocus(null, null));
+    g.addEventListener('click', () => select(k.id));
+    nodeEls[k.id] = g;
+  });
+  // viewBox — за фактичними межами вмісту, щоб довгі підписи не обрізались
+  const PAD = 12;
+  svg.setAttribute('viewBox', `${bb.x0 - PAD} ${bb.y0 - PAD} ${bb.x1 - bb.x0 + 2 * PAD} ${bb.y1 - bb.y0 + 2 * PAD}`);
+
+  // матриця в тому ж порядку, що й коло
+  const tbl = document.getElementById('ka-matrix');
+  const cell = {};
+  DATA.kaEdges.forEach(e => (cell[e.source + '|' + e.target] = e));
+  const firstOf = new Set(CL_ORDER.map(c => (KA_ORDER.find(k => k.cluster === c) || {}).id));
+  firstOf.delete(KA_ORDER[0].id);
+  let html = '<thead><tr><th class="corner"></th>' + CL_ORDER.map(c => {
+    const n = KA_ORDER.filter(k => k.cluster === c).length;
+    return `<th class="cl" colspan="${n}" style="color:${CL_COLOR[c]};border-bottom-color:${CL_COLOR[c]}">${n > 2 ? esc(c + ' · ' + CL_NAME[c]) : esc(c)}</th>`;
+  }).join('') + '</tr>';
+  html += '<tr><th class="corner" title="рядок → стовпець">з \\ до</th>' + KA_ORDER.map(k =>
+    `<th class="ch${firstOf.has(k.id) ? ' sl' : ''}" data-c="${k.id}" title="${esc(IND[k.id].label)}">${k.n}</th>`).join('') + '</tr></thead><tbody>';
+  KA_ORDER.forEach(r => {
+    const st = firstOf.has(r.id) ? ' st' : '';
+    html += `<tr><th class="rh${st}" data-r="${r.id}" style="border-left-color:${CL_COLOR[r.cluster]}" title="${esc(IND[r.id].label)}">${r.n}</th>`;
+    KA_ORDER.forEach(c => {
+      const e = cell[r.id + '|' + c.id];
+      const cls = (firstOf.has(c.id) ? 'sl' : '') + st;
+      if (r.id === c.id) html += `<td class="self ${cls}" data-s="${r.id}" data-t="${c.id}"></td>`;
+      else if (e) html += `<td class="has ${cls}" data-s="${r.id}" data-t="${c.id}" style="color:${relColor(e.rel)}" title="${esc(IND[r.id].label)} —${relLetter(e.rel)}→ ${esc(IND[c.id].label)}">${relLetter(e.rel)}</td>`;
+      else html += `<td class="${cls}" data-s="${r.id}" data-t="${c.id}"></td>`;
+    });
+    html += '</tr>';
+  });
+  tbl.innerHTML = html + '</tbody>';
+  tbl.querySelectorAll('td').forEach(td => {
+    td.addEventListener('mouseenter', () => kaFocus(null, [td.dataset.s, td.dataset.t]));
+    td.addEventListener('mouseleave', () => kaFocus(null, null));
+    if (td.classList.contains('has')) td.addEventListener('click', () => select(td.dataset.s));
+  });
+  tbl.querySelectorAll('th[data-r],th[data-c]').forEach(th => {
+    const id = th.dataset.r || th.dataset.c;
+    th.addEventListener('mouseenter', () => kaFocus(id, null));
+    th.addEventListener('mouseleave', () => kaFocus(null, null));
+    th.addEventListener('click', () => select(id));
+  });
+
+  kaFocus = function(nodeId, pair) {
+    const isEdge = pair && cell[pair[0] + '|' + pair[1]];
+    svg.classList.toggle('focus', !!(nodeId || isEdge));
+    const on = new Set();
+    const hitE = (s, t) => nodeId ? (s === nodeId || t === nodeId) : isEdge ? (s === pair[0] && t === pair[1]) : false;
+    edgeEls.forEach(({g, badge}) => {
+      const hit = hitE(g.dataset.s, g.dataset.t);
+      g.classList.toggle('hl', hit); badge.classList.toggle('hl', hit);
+      if (hit) { on.add(g.dataset.s); on.add(g.dataset.t); }
+    });
+    if (nodeId) on.add(nodeId);
+    Object.entries(nodeEls).forEach(([id, g]) => g.classList.toggle('hl', on.has(id)));
+    // «хрест» у матриці: рядок-джерело і стовпець-ціль
+    const row = nodeId || (pair && pair[0]), col = nodeId || (pair && pair[1]);
+    tbl.querySelectorAll('td').forEach(td => {
+      td.classList.toggle('cross', !!row && (td.dataset.s === row || td.dataset.t === col));
+      td.classList.toggle('hl', !!pair && td.dataset.s === pair[0] && td.dataset.t === pair[1]);
+    });
+    tbl.querySelectorAll('th[data-r]').forEach(th => th.classList.toggle('cross', th.dataset.r === row));
+    tbl.querySelectorAll('th[data-c]').forEach(th => th.classList.toggle('cross', th.dataset.c === col));
+  };
+
+  // легенди
+  const byLetter = {}, relOf = {};
+  DATA.kaEdges.forEach(e => { const l = relLetter(e.rel); byLetter[l] = (byLetter[l] || 0) + 1; relOf[l] = relOf[l] || e.rel; });
+  document.getElementById('ka-legend').innerHTML = Object.keys(byLetter).sort((a, b) => byLetter[b] - byLetter[a])
+    .map(l => `<span title="swe:${esc(relOf[l])}"><i style="background:${relColor(relOf[l])}"></i><b style="color:${relColor(relOf[l])}">${esc(l)}</b> ${esc(UZ_NAME[l] || relOf[l])} · ${byLetter[l]}</span>`).join('');
+  document.getElementById('ka-clusters').innerHTML = CL_ORDER.map(c =>
+    `<span><i class="bandsw" style="background:${CL_COLOR[c]}"></i>${esc(c)} · ${esc(CL_NAME[c])} · ${KA_ORDER.filter(k => k.cluster === c).length}</span>`).join('');
+  document.getElementById('ka-kpi').textContent =
+    `${DATA.kaEdges.length} УЗ між ${DATA.ka.length} KA. Наведіть на вершину, ребро чи клітинку — підсвітяться зв'язки й типи УЗ.`;
+})();
+
+// ---------- ЛПМ: три шари ----------
+(function(){
+  const svg = document.getElementById('lpm-svg');
+  const NS = 'http://www.w3.org/2000/svg';
+  const L = DATA.lpm, LAYER = L.layerOf;
+  const BW = 250, BH = 24, ROW = 31, COLX = [0, 420, 840], TOP = 46, ARC = 110;
+  const el = (tag, attrs, parent) => {
+    const e = document.createElementNS(NS, tag);
+    Object.entries(attrs).forEach(([k, v]) => e.setAttribute(k, v));
+    (parent || svg).appendChild(e);
+    return e;
+  };
+  const nb = {};  // сусіди без напрямку
+  L.edges.forEach(e => {
+    (nb[e.source] = nb[e.source] || []).push(e.target);
+    (nb[e.target] = nb[e.target] || []).push(e.source);
+  });
+
+  // порядок: KA — за кластерами Ос (як на кругу), поняття — барицентрично, щоб зменшити перетини
+  const order = [L.layers[0].ids.slice(), L.layers[1].ids.slice(), KA_ORDER.map(k => k.id)];
+  const rank = {};
+  const setRank = li => order[li].forEach((id, i) => rank[id] = i);
+  setRank(2);
+  const bary = (li, from) => {
+    const val = id => {
+      const ps = (nb[id] || []).filter(x => from.includes(LAYER[x]) && rank[x] != null).map(x => rank[x]);
+      return ps.length ? ps.reduce((a, b) => a + b, 0) / ps.length : (rank[id] != null ? rank[id] : 99);
+    };
+    const v = {}; order[li].forEach(id => v[id] = val(id));
+    order[li].sort((a, b) => v[a] - v[b] || a.localeCompare(b));
+    setRank(li);
+  };
+  bary(1, [2]); bary(0, [1, 2]);
+  for (let i = 0; i < 4; i++) { bary(1, [0, 2]); bary(0, [1, 2]); }
+
+  const pos = {};
+  order.forEach((ids, li) => ids.forEach((id, i) => pos[id] = {x: COLX[li], y: TOP + i * ROW, li}));
+  const H = TOP + 18 * ROW + 10, W = COLX[2] + BW;
+  svg.setAttribute('viewBox', `${-ARC} 0 ${W + 2 * ARC} ${H}`);
+
+  const defs = el('defs', {});
+  const marker = {};
+  Object.values(DATA.uz).forEach(u => {
+    if (marker[u.letter]) return;
+    const id = 'larr' + Object.keys(marker).length;
+    const m = el('marker', {id, viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 7, markerHeight: 7,
+      orient: 'auto-start-reverse', markerUnits: 'userSpaceOnUse'}, defs);
+    el('path', {d: 'M0,0.5 L10,5 L0,9.5 z', fill: u.color}, m);
+    marker[u.letter] = id;
+  });
+
+  L.layers.forEach((layer, li) => {
+    const t = el('text', {class: 'colhead', x: COLX[li] + BW / 2, y: 14});
+    t.textContent = `${layer.label} · ${layer.ids.length}`;
+    const s = el('text', {class: 'colsub', x: COLX[li] + BW / 2, y: 30});
+    s.textContent = ['аксіоматичний шар (суміжні ПрО)', 'поняття ПрО ІПЗ', 'області знань SWEBOK v4.0'][li];
+  });
+
+  // ребра: між шарами — S-крива від краю до краю; всередині шару — дуга назовні (ліворуч для
+  // первинних і базових, праворуч для KA)
+  const edgeLayer = el('g', {}), nodeLayer = el('g', {});
+  const edgeEls = [];
+  L.edges.forEach(e => {
+    const a = pos[e.source], b = pos[e.target], u = DATA.uz[e.rel];
+    let d;
+    if (a.li === b.li) {
+      const right = a.li === 2, x = right ? a.x + BW : a.x, dir = right ? 1 : -1;
+      const bulge = dir * Math.min(ARC - 6, 16 + Math.abs(a.y - b.y) * 0.22);
+      d = `M${x},${a.y + BH / 2} C${x + bulge},${a.y + BH / 2} ${x + bulge},${b.y + BH / 2} ${x + 2 * dir},${b.y + BH / 2}`;
+    } else {
+      const fwd = a.x < b.x;
+      const x1 = fwd ? a.x + BW : a.x, x2 = fwd ? b.x : b.x + BW, mx = (x1 + x2) / 2;
+      d = `M${x1},${a.y + BH / 2} C${mx},${a.y + BH / 2} ${mx},${b.y + BH / 2} ${x2},${b.y + BH / 2}`;
+    }
+    const p = el('path', {class: 'ledge', d, stroke: u.color, 'marker-end': `url(#${marker[u.letter]})`}, edgeLayer);
+    p.dataset.s = e.source; p.dataset.t = e.target;
+    const tt = el('title', {}, p);
+    tt.textContent = `${IND[e.source].label} —${u.letter}→ ${IND[e.target].label}  (${UZ_NAME[u.letter] || ''}, swe:${e.rel})`;
+    edgeEls.push(p);
+  });
+
+  const nodeEls = {};
+  const kaNum = {}; DATA.ka.forEach(k => kaNum[k.id] = k.n);
+  const symOf = id => kaNum[id] ? "KA " + kaNum[id] : id.replace(/^[PB]_/, '').replace('Cost', '$').replace('SetRelationFunction', 'X,R,F');
+  const color = id => LAYER[id] === 2 ? CL_COLOR[(DATA.ka.find(k => k.id === id) || {}).cluster] : groupColor(IND[id].group);
+  const mctx = document.createElement('canvas').getContext('2d');
+  mctx.font = `11.5px ${getComputedStyle(document.body).fontFamily}`;
+  Object.entries(pos).forEach(([id, p]) => {
+    const g = el('g', {class: 'lnode'}, nodeLayer);
+    el('rect', {x: p.x, y: p.y, width: BW, height: BH, rx: 5, stroke: color(id)}, g);
+    const sym = symOf(id);
+    const t = el('text', {x: p.x + 8, y: p.y + BH / 2 + .5}, g);
+    const ts = el('tspan', {class: 'sym', fill: color(id)}, t); ts.textContent = sym + '  ';
+    let label = IND[id].label;
+    const room = BW - 16 - mctx.measureText(sym + '  ').width - 6;
+    while (label.length > 4 && mctx.measureText(label).width > room) label = label.slice(0, -2).replace(/[\s,.;:(—-]+$/, '') + '…';
+    const tl = el('tspan', {}, t); tl.textContent = label.endsWith('……') ? label.slice(0, -1) : label;
+    el('title', {}, g).textContent = IND[id].label + (IND[id].props.lpmFormula ? '\nФормула: ' + IND[id].props.lpmFormula[0] : '');
+    g.addEventListener('mouseenter', () => focus(id));
+    g.addEventListener('mouseleave', () => focus(sel));
+    g.addEventListener('click', () => select(id));
+    nodeEls[id] = g;
+  });
+
+  // ланцюжок: сусіди того ж шару + усе, що досяжне монотонно вниз (до первинних) і вгору (до KA)
+  function chain(id) {
+    const on = new Set([id]);
+    (nb[id] || []).filter(x => LAYER[x] === LAYER[id]).forEach(x => on.add(x));
+    [-1, 1].forEach(dir => {
+      const q = [id];
+      while (q.length) {
+        const cur = q.shift();
+        (nb[cur] || []).forEach(x => {
+          if ((LAYER[x] - LAYER[cur]) * dir > 0 && !on.has(x)) { on.add(x); q.push(x); }
+        });
+      }
+    });
+    return on;
+  }
+  let sel = null;
+  function focus(id) {
+    svg.classList.toggle('focus', !!id);
+    const on = id ? chain(id) : new Set();
+    Object.entries(nodeEls).forEach(([k, g]) => g.classList.toggle('hl', on.has(k)));
+    edgeEls.forEach(p => {
+      const s = p.dataset.s, t = p.dataset.t;
+      // ребра шляху: інцидентні вибраному або між вершинами ланцюжка різних шарів
+      p.classList.toggle('hl', !!id && (s === id || t === id || (on.has(s) && on.has(t) && LAYER[s] !== LAYER[t])));
+    });
+  }
+  lpmSelect = id => { sel = pos[id] ? id : null; focus(sel); };
+
+  const byLetter = {}, relOf = {}, pairs = {};
+  L.edges.forEach(e => {
+    const l = relLetter(e.rel); byLetter[l] = (byLetter[l] || 0) + 1; relOf[l] = e.rel;
+    const a = LAYER[e.source], b = LAYER[e.target], k = a === b ? 'w' + a : Math.min(a, b) + '-' + Math.max(a, b);
+    pairs[k] = (pairs[k] || 0) + 1;
+  });
+  document.getElementById('lpm-legend').innerHTML = Object.keys(byLetter).sort((a, b) => byLetter[b] - byLetter[a])
+    .map(l => `<span title="swe:${esc(relOf[l])}"><i style="background:${relColor(relOf[l])}"></i><b style="color:${relColor(relOf[l])}">${esc(l)}</b> ${esc(UZ_NAME[l])} · ${byLetter[l]}</span>`).join('');
+  const P = k => pairs[k] || 0;
+  document.getElementById('lpm-kpi').innerHTML =
+    `<span>${L.edges.length} УЗ: первинні→базові ${P('0-1')} · базові→KA ${P('1-2')} · первинні→KA ${P('0-2')} · ` +
+    `між базовими ${P('w1')} · між KA ${P('w2')}</span><span style="color:var(--muted)">Наведіть на поняття — підсвітиться ланцюжок до первинних і до KA; клік — деталі й формула</span>`;
+})();
+
+// ---------- перевірки ----------
+(function(){
+  const C = DATA.checks;
+  const nOk = C.filter(c => c.ok === true).length, nFail = C.filter(c => c.ok === false).length;
+  const uz = DATA.edges.filter(e => DATA.uz[e.rel]).length;
+  const dec = Object.values(IND).filter(i => ['SubProcess', 'Action', 'Operation', 'FundamentalAction'].some(t => i.types.includes(t))).length;
+  const owl = C.find(c => c.group === 'OWL');
+  const tiles = [
+    [`${nOk} / ${C.length}`, nFail ? `перевірок пройдено, ${nFail} з помилками` : 'перевірок пройдено'],
+    [owl && owl.ok === true ? '✓' : owl && owl.ok === false ? '✗' : '—',
+     owl && owl.ok === true ? 'OWL 2 несуперечлива (HermiT)' : 'логіка OWL 2 (HermiT)'],
+    [DATA.lpm.layers.map(l => l.ids.length).join(' + '), 'понять у трьох шарах ЛПМ'],
+    [uz, 'уніфікованих зв\'язків (о, а, х, к, s)'],
+    [dec, 'елементів декомпозиції KA 6'],
+    [DATA.stats.triples, 'трійок RDF'],
+  ];
+  document.getElementById('chk-tiles').innerHTML = tiles.map(([v, l]) =>
+    `<div class="tile"><div class="v">${esc(v)}</div><div class="l">${esc(l)}</div></div>`).join('');
+  document.getElementById('chk-table').innerHTML = C.map(c => {
+    const st = c.ok === true ? '<span class="chip ok">PASS</span>' : c.ok === false ? '<span class="chip fail">FAIL</span>' : '<span class="chip skip">—</span>';
+    return `<tr><td class="g">${esc(c.group)}</td><td class="st">${st}</td><td><div>${esc(c.title)}</div><div class="d">${esc(c.detail)}</div></td></tr>`;
+  }).join('');
+})();
+
+// ---------- network view ----------
+function mulberry32(a) {
+  return function() {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function shorten(s, n) { return s.length <= n ? s : s.slice(0, n - 1).replace(/[\s,.;:(—-]+$/, '') + '…'; }
+const rnd = mulberry32(20241001);
+const NODE_R = {'Oп': 9, 'Oо': 9, 'Oз': 9, 'ka6': 6, 'sys': 6};
+const KA_NUM = {}; DATA.ka.forEach(k => KA_NUM[k.id] = k.n);
+const nodes = Object.values(IND).map(i => ({
+  id: i.id, label: i.label, short: shorten(i.label, 30), group: i.group, r: NODE_R[i.group] || 4.5,
+  x: (rnd() - 0.5) * 600, y: (rnd() - 0.5) * 600, vx: 0, vy: 0,
+}));
+const nodeById = {}; nodes.forEach(n => nodeById[n.id] = n);
+const edges = DATA.edges.filter(e => nodeById[e.source] && nodeById[e.target]);
+const degree = {}; edges.forEach(e => { degree[e.source] = (degree[e.source] || 0) + 1; degree[e.target] = (degree[e.target] || 0) + 1; });
+const nIsolated = nodes.filter(n => !degree[n.id]).length;
+
+const groupState = {}; DATA.groups.forEach(g => groupState[g.id] = !g.hidden);
+const relState = {}; DATA.relTypes.forEach(r => relState[r] = true);
+let showIsolated = false;  // поняття без об'єктних зв'язків лише розтягують кадр
+let fitted = false;
+
+function checkbox(container, kind, key, swatchHtml, text, count, on) {
+  const lab = document.createElement('label');
+  lab.innerHTML = `<input type="checkbox" data-kind="${kind}" data-key="${esc(key)}"${on ? ' checked' : ''}> ${swatchHtml} <span>${esc(text)}</span><span class="n">${count}</span>`;
+  lab.querySelector('input').addEventListener('change', ev => {
+    if (kind === 'iso') showIsolated = ev.target.checked;
+    else (kind === 'group' ? groupState : relState)[key] = ev.target.checked;
+    draw(); updateSearch();
+  });
+  container.appendChild(lab);
+}
+function syncChecks() {
+  document.querySelectorAll('.net-side input[type=checkbox]').forEach(cb => {
+    cb.checked = cb.dataset.kind === 'iso' ? showIsolated : (cb.dataset.kind === 'group' ? groupState : relState)[cb.dataset.key];
+  });
+}
+const gcount = {}; nodes.forEach(n => gcount[n.group] = (gcount[n.group] || 0) + 1);
+DATA.groups.filter(g => gcount[g.id]).forEach(g =>
+  checkbox(document.getElementById('group-filters'), 'group', g.id,
+    `<span class="swatch" style="background:${g.color}"></span>`, g.label, gcount[g.id], groupState[g.id]));
+if (nIsolated) checkbox(document.getElementById('extra-filters'), 'iso', 'iso',
+  `<span class="swatch ring"></span>`, 'Показати вершини без зв\'язків', nIsolated, showIsolated);
+const rcount = {}; edges.forEach(e => rcount[e.rel] = (rcount[e.rel] || 0) + 1);
+DATA.relTypes.slice().sort((a, b) => rcount[b] - rcount[a] || a.localeCompare(b)).forEach(r =>
+  checkbox(document.getElementById('rel-filters'), 'rel', r,
+    uzOf(r) ? `<span class="letter" style="color:${relColor(r)}">${esc(relLetter(r))}</span>`
+            : `<span class="letter" style="color:var(--muted)">·</span>`,
+    uzOf(r) ? `${r} (${UZ_NAME[relLetter(r)] || ''})` : r, rcount[r], true));
+document.querySelectorAll('[data-all],[data-none]').forEach(b => b.addEventListener('click', () => {
+  const kind = b.dataset.all || b.dataset.none, st = kind === 'group' ? groupState : relState;
+  Object.keys(st).forEach(k => st[k] = !!b.dataset.all);
+  syncChecks(); draw(); updateSearch();
+}));
+
+// Силова розкладка. Детермінований старт (seeded PRNG) → однакова картина при кожному відкритті.
+// Рівновага «тяжіння до центру ↔ відштовхування» дає радіус ~√(N·REPULSE/CENTER): при
+// REPULSE=2600, CENTER=0.0025 це ~12 000 і вершини розліталися за межі екрана.
+function simulate(iterations) {
+  const REPULSE = 150, SOFT = 100, SPRING = 0.05, SPRING_LEN = 60, DAMPING = 0.82, CENTER = 0.04, VMAX = 20;
+  for (let it = 0; it < iterations; it++) {
+    const alpha = Math.max(0.05, 1 - it / iterations);
+    for (let i = 0; i < nodes.length; i++) {
+      const a = nodes[i];
+      let fx = -a.x * CENTER, fy = -a.y * CENTER;
+      for (let j = 0; j < nodes.length; j++) {
+        if (i === j) continue;
+        const b = nodes[j];
+        const dx = a.x - b.x, dy = a.y - b.y;
+        const f = REPULSE / (dx*dx + dy*dy + SOFT);
+        fx += dx * f; fy += dy * f;
+      }
+      a._fx = fx; a._fy = fy;
+    }
+    edges.forEach(e => {
+      const a = nodeById[e.source], b = nodeById[e.target];
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const dist = Math.sqrt(dx*dx + dy*dy) || 1;
+      const f = SPRING * (dist - SPRING_LEN);
+      a._fx += dx/dist*f; a._fy += dy/dist*f;
+      b._fx -= dx/dist*f; b._fy -= dy/dist*f;
+    });
+    nodes.forEach(n => {
+      n.vx = (n.vx + n._fx * alpha) * DAMPING; n.vy = (n.vy + n._fy * alpha) * DAMPING;
+      const v = Math.hypot(n.vx, n.vy);
+      if (v > VMAX) { n.vx *= VMAX / v; n.vy *= VMAX / v; }
+      n.x += n.vx; n.y += n.vy;
+    });
+  }
+  // розведення зіткнень: щільне ядро KA інакше лишає підписам нуль місця
+  for (let it = 0; it < 80; it++) {
+    for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) {
+      const a = nodes[i], b = nodes[j];
+      const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 0.01;
+      const min = (a.r + b.r) * 2 + 18;
+      if (d < min) {
+        const push = (min - d) / 2, ux = dx / d, uy = dy / d;
+        a.x -= ux * push; a.y -= uy * push; b.x += ux * push; b.y += uy * push;
+      }
+    }
+  }
+}
+simulate(400);
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const tip = document.getElementById('tip');
+let view = {scale: 1, ox: 0, oy: 0};
+let selected = null, hoverNode = null, hoverEdge = null;
+const dpr = () => window.devicePixelRatio || 1;
+const FONT_FAMILY = getComputedStyle(document.body).fontFamily;
+
+function resizeCanvas() {
+  const rect = canvas.parentElement.getBoundingClientRect();
+  if (!rect.width) return;
+  canvas.width = rect.width * dpr();
+  canvas.height = rect.height * dpr();
+  // перше вписування — лише коли canvas уже має розмір (вкладка могла бути прихованою)
+  if (!fitted && fit()) { fitted = true; if (selected) centerOn(selected); }
+  draw();
+}
+window.addEventListener('resize', resizeCanvas);
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => draw());
+
+function worldToScreen(x, y) {
+  return [canvas.width/2 + view.ox + x*view.scale*dpr(), canvas.height/2 + view.oy + y*view.scale*dpr()];
+}
+function screenToWorld(px, py) {
+  return [(px*dpr() - canvas.width/2 - view.ox)/(view.scale*dpr()), (py*dpr() - canvas.height/2 - view.oy)/(view.scale*dpr())];
+}
+function visibleNode(n) { return groupState[n.group] && (showIsolated || degree[n.id] > 0); }
+function visibleEdge(e) { return relState[e.rel] && visibleNode(nodeById[e.source]) && visibleNode(nodeById[e.target]); }
+function ensureVisible(n) {
+  let changed = false;
+  if (!groupState[n.group]) { groupState[n.group] = true; changed = true; }
+  if (!degree[n.id] && !showIsolated) { showIsolated = true; changed = true; }
+  if (changed) syncChecks();
+}
+
+function fit() {
+  const vis = nodes.filter(visibleNode);
+  if (!vis.length || !canvas.width) return false;
+  const xs = vis.map(n => n.x), ys = vis.map(n => n.y);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  const w = canvas.width / dpr(), h = canvas.height / dpr();
+  // поля: праворуч і ліворуч — під підписи, згори — під кнопку
+  view.scale = Math.max(0.15, Math.min(2.5, Math.min((w - 220) / (x1 - x0 || 1), (h - 90) / (y1 - y0 || 1))));
+  view.ox = -(x0 + x1) / 2 * view.scale * dpr();
+  view.oy = (-(y0 + y1) / 2 * view.scale + 10) * dpr();
+  draw();
+  return true;
+}
+document.getElementById('fit').addEventListener('click', fit);
+function centerOn(n) {
+  view.scale = Math.max(view.scale, 1.1);
+  const wrap = canvas.parentElement.getBoundingClientRect();
+  // зсув ліворуч, щоб вершину не закривала панель деталей
+  const shift = document.getElementById('detail').classList.contains('show') && wrap.width > 700 ? 170 : 0;
+  view.ox = (-n.x * view.scale - shift) * dpr(); view.oy = -n.y * view.scale * dpr();
+}
+
+// search
+const searchInput = document.getElementById('search');
+let searchTerm = '', matches = [], matchIdx = -1;
+function nodeMatches(n) { return n.label.toLowerCase().includes(searchTerm) || n.id.toLowerCase().includes(searchTerm); }
+function updateSearch() {
+  searchTerm = searchInput.value.trim().toLowerCase();
+  matches = searchTerm ? nodes.filter(n => visibleNode(n) && nodeMatches(n)) : [];
+  const hidden = searchTerm ? nodes.filter(n => !visibleNode(n) && nodeMatches(n)).length : 0;
+  document.getElementById('searchinfo').textContent = searchTerm
+    ? `${matches.length} збігів` + (hidden ? ` (+${hidden} у прихованих)` : '') + (matches.length ? ' · Enter — наступний' : '')
+    : '';
+  draw();
+}
+searchInput.addEventListener('input', () => { matchIdx = -1; updateSearch(); });
+searchInput.addEventListener('keydown', ev => {
+  if (ev.key !== 'Enter' || !matches.length) return;
+  matchIdx = (matchIdx + 1) % matches.length;
+  select(matches[matchIdx].id);
+});
+
+// ---- геометрія для розстановки підписів (усе в пікселях пристрою) ----
+function rectsOverlap(a, b, m) {
+  return a.x < b.x + b.w + m && b.x < a.x + a.w + m && a.y < b.y + b.h + m && b.y < a.y + a.h + m;
+}
+function rectCircle(r, c, m) {
+  const nx = Math.max(r.x, Math.min(c.x, r.x + r.w)), ny = Math.max(r.y, Math.min(c.y, r.y + r.h));
+  return Math.hypot(c.x - nx, c.y - ny) < c.r + m;
+}
+function segRect(s, r) {  // Liang–Barsky
+  let t0 = 0, t1 = 1;
+  const dx = s.x2 - s.x1, dy = s.y2 - s.y1;
+  const p = [-dx, dx, -dy, dy], q = [s.x1 - r.x, r.x + r.w - s.x1, s.y1 - r.y, r.y + r.h - s.y1];
+  for (let i = 0; i < 4; i++) {
+    if (p[i] === 0) { if (q[i] < 0) return false; continue; }
+    const t = q[i] / p[i];
+    if (p[i] < 0) { if (t > t1) return false; if (t > t0) t0 = t; }
+    else { if (t < t0) return false; if (t < t1) t1 = t; }
+  }
+  return true;
+}
+
+function arrow(x1, y1, x2, y2, r, color, width) {
+  const k = dpr();
+  const d = Math.hypot(x2 - x1, y2 - y1) || 1, ux = (x2 - x1) / d, uy = (y2 - y1) / d;
+  const tx = x2 - ux * r, ty = y2 - uy * r, s = (width > k ? 7 : 5.5) * k;
+  ctx.strokeStyle = color; ctx.lineWidth = width;
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(tx - ux * s * .7, ty - uy * s * .7); ctx.stroke();
+  ctx.fillStyle = color;
+  ctx.beginPath(); ctx.moveTo(tx, ty);
+  ctx.lineTo(tx - ux * s - uy * s * .5, ty - uy * s + ux * s * .5);
+  ctx.lineTo(tx - ux * s + uy * s * .5, ty - uy * s - ux * s * .5);
+  ctx.closePath(); ctx.fill();
+}
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+
+let placedLabels = [], placedBoxes = [];  // для перевірки в тестах: скільки підписів поставлено і чи не перетинаються
+function draw() {
+  if (!canvas.width) return;
+  const INK = css('--ink'), INK2 = css('--ink2'), MUTED = css('--muted'), SURF = css('--surface');
+  const k = dpr(), W = canvas.width, H = canvas.height;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  const rs = Math.min(1.4, Math.max(0.8, view.scale));
+
+  const P = {};
+  nodes.forEach(n => {
+    if (!visibleNode(n)) return;
+    const [x, y] = worldToScreen(n.x, n.y);
+    P[n.id] = {x, y, r: n.r * rs * k, n};
+  });
+  const focusId = selected ? selected.id : (hoverNode ? hoverNode.id : null);
+  const neighbors = new Set();
+  const visEdges = edges.filter(visibleEdge);
+  if (selected) {
+    neighbors.add(selected.id);
+    visEdges.forEach(e => { if (e.source === selected.id) neighbors.add(e.target); if (e.target === selected.id) neighbors.add(e.source); });
+  }
+  const hot = e => e === hoverEdge || (focusId && (e.source === focusId || e.target === focusId));
+  const dimNode = n => selected && !neighbors.has(n.id);
+  const onScreen = p => p.x > -40 * k && p.x < W + 40 * k && p.y > -40 * k && p.y < H + 40 * k;
+  const segs = visEdges.map(e => {
+    const a = P[e.source], b = P[e.target];
+    return {e, x1: a.x, y1: a.y, x2: b.x, y2: b.y, hot: hot(e), len: Math.hypot(b.x - a.x, b.y - a.y)};
+  });
+
+  // 1. ребра: спершу фонові, потім підсвічені
+  segs.forEach(s => {
+    if (s.hot) return;
+    const uz = !!uzOf(s.e.rel);
+    ctx.globalAlpha = selected ? 0.06 : (uz ? 0.5 : 0.35);
+    arrow(s.x1, s.y1, s.x2, s.y2, P[s.e.target].r + 2 * k, uz ? relColor(s.e.rel) : MUTED, 1 * k);
+  });
+  ctx.globalAlpha = 1;
+  segs.forEach(s => { if (s.hot) arrow(s.x1, s.y1, s.x2, s.y2, P[s.e.target].r + 2 * k, uzOf(s.e.rel) ? relColor(s.e.rel) : INK2, 2 * k); });
+
+  // 2. вершини
+  const matchSet = new Set(matches.map(n => n.id));
+  Object.values(P).forEach(p => {
+    const n = p.n;
+    ctx.globalAlpha = dimNode(n) ? 0.12 : (searchTerm && !matchSet.has(n.id) ? 0.25 : 1);
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fillStyle = groupColor(n.group); ctx.fill();
+    ctx.lineWidth = 1.5 * k; ctx.strokeStyle = SURF; ctx.stroke();
+    if (matchSet.has(n.id) || n === selected || n === hoverNode) {
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r + 2.5 * k, 0, Math.PI * 2);
+      ctx.lineWidth = 2 * k; ctx.strokeStyle = INK; ctx.stroke();
+    }
+    if (KA_NUM[n.id] && p.r >= 6.5 * k) {
+      ctx.fillStyle = '#fff'; ctx.font = `700 ${Math.round(p.r * 1.05)}px ${FONT_FAMILY}`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(KA_NUM[n.id], p.x, p.y + 0.5 * k);
+    }
+  });
+  ctx.globalAlpha = 1; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+
+  // 3. плашки типів зв'язків — ставляться до підписів і є для них перешкодами
+  const boxes = [];
+  const circles = Object.values(P).filter(onScreen);
+  const hitsNode = (r, own) => circles.some(c => !own.includes(c.n.id) && rectCircle(r, c, 1 * k));
+  ctx.font = `600 ${10.5 * k}px ${FONT_FAMILY}`;
+  segs.forEach(s => {
+    const show = s.hot || (!selected && view.scale >= 1.0 && s.len >= 110 * k);
+    // на короткому ребрі плашка лягла б на вершини й підписи; тип видно з кольору й підказки
+    if (!show || s.len < P[s.e.source].r + P[s.e.target].r + 34 * k) return;
+    const uz = uzOf(s.e.rel);
+    const text = uz ? uz.letter : s.e.rel;
+    const h = 16 * k, w = uz ? h : ctx.measureText(text).width + 10 * k;
+    let spot = null;
+    for (const t of [0.5, 0.38, 0.62, 0.28, 0.72]) {
+      const cx = s.x1 + (s.x2 - s.x1) * t, cy = s.y1 + (s.y2 - s.y1) * t;
+      const r = {x: cx - w / 2, y: cy - h / 2, w, h};
+      if (!boxes.some(b => rectsOverlap(r, b, 1 * k)) && !hitsNode(r, [])) { spot = r; break; }
+    }
+    if (!spot) return;
+    boxes.push(spot);
+    const color = uz ? relColor(s.e.rel) : INK2;
+    ctx.globalAlpha = s.hot ? 1 : 0.85;
+    roundRect(spot.x, spot.y, spot.w, spot.h, h / 2);
+    ctx.fillStyle = SURF; ctx.fill();
+    ctx.lineWidth = 1.2 * k; ctx.strokeStyle = uz ? color : MUTED; ctx.stroke();
+    ctx.fillStyle = color; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(text, spot.x + spot.w / 2, spot.y + spot.h / 2 + 0.5 * k);
+  });
+  ctx.globalAlpha = 1; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+
+  // 4. підписи: пріоритетний порядок, 8 позицій навколо вершини, без перетину з підписами,
+  //    вершинами, плашками й підсвіченими ребрами; мінімум перетнутих фонових ребер
+  const FS = 12 * k, LH = 15 * k, PADX = 2 * k;
+  const must = n => n === selected || n === hoverNode || neighbors.has(n.id) || matchSet.has(n.id);
+  const prio = n => n === selected ? 0 : n === hoverNode ? 1 : neighbors.has(n.id) ? 2 : matchSet.has(n.id) ? 3
+                  : KA_NUM[n.id] ? 4 : n.r >= 6 ? 5 : 6;
+  const cand = Object.values(P).filter(p => onScreen(p) && !dimNode(p.n) && !(searchTerm && !matchSet.has(p.n.id) && !must(p.n)))
+    .filter(p => must(p.n) || KA_NUM[p.n.id] || view.scale >= (p.n.r >= 6 || (degree[p.n.id] || 0) >= 5 ? 0.6 : 1.1))
+    .sort((a, b) => prio(a.n) - prio(b.n) || (degree[b.n.id] || 0) - (degree[a.n.id] || 0) || a.n.id.localeCompare(b.n.id));
+  placedLabels = []; placedBoxes = boxes;
+  const bgSegs = segs.filter(s => !s.hot && !selected);
+  const hotSegs = segs.filter(s => s.hot);
+  cand.forEach(p => {
+    const n = p.n;
+    ctx.font = `${KA_NUM[n.id] || n === selected ? 600 : 400} ${FS}px ${FONT_FAMILY}`;
+    const text = n.short, w = ctx.measureText(text).width + 2 * PADX, h = LH;
+    const g = p.r + 4 * k, d = p.r * 0.75 + 3 * k;
+    const spots = [
+      [p.x + g, p.y - h / 2], [p.x - g - w, p.y - h / 2], [p.x - w / 2, p.y - g - h], [p.x - w / 2, p.y + g],
+      [p.x + d, p.y - d - h], [p.x - d - w, p.y - d - h], [p.x + d, p.y + d], [p.x - d - w, p.y + d],
+    ];
+    // запасне кільце далі від вершини — для обов'язкових підписів, коли ближні позиції зайняті
+    if (must(n)) [16, 34].forEach(step => {
+      const G = g + step * k, D = d + step * k * 0.75;
+      spots.push([p.x + G, p.y - h / 2], [p.x - G - w, p.y - h / 2], [p.x - w / 2, p.y - G - h], [p.x - w / 2, p.y + G],
+                 [p.x + D, p.y - D - h], [p.x - D - w, p.y - D - h], [p.x + D, p.y + D], [p.x - D - w, p.y + D]);
+    });
+    let best = null, bestCost = Infinity;
+    spots.forEach(([x, y], i) => {
+      const r = {x, y, w, h};
+      let hard = 0;
+      if (placedLabels.some(b => rectsOverlap(r, b, 1 * k))) hard++;
+      if (boxes.some(b => rectsOverlap(r, b, 1 * k))) hard++;
+      if (hitsNode(r, [n.id])) hard++;
+      if (hotSegs.some(s => segRect(s, r))) hard++;
+      if (x < 0 || y < 0 || x + w > W || y + h > H) hard++;
+      const soft = bgSegs.reduce((acc, s) => acc + (segRect(s, r) ? 1 : 0), 0);
+      const cost = hard * 1000 + soft * 10 + i;  // i — перевага E, W, N, S над діагоналями
+      if (cost < bestCost) { bestCost = cost; best = r; }
+    });
+    if (!best || (bestCost >= 1000 && !must(n))) return;
+    placedLabels.push(best);
+    const tx = best.x + PADX, ty = best.y + h / 2;
+    ctx.textBaseline = 'middle';
+    ctx.globalAlpha = 0.8; ctx.lineWidth = 3 * k; ctx.lineJoin = 'round'; ctx.strokeStyle = SURF;
+    ctx.strokeText(text, tx, ty);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = (selected && !must(n)) ? INK2 : (KA_NUM[n.id] || must(n) ? INK : INK2);
+    ctx.fillText(text, tx, ty);
+  });
+  ctx.textBaseline = 'alphabetic'; ctx.globalAlpha = 1;
+}
+
+// hit tests
+function nodeAt(px, py) {
+  const [wx, wy] = screenToWorld(px, py);
+  let hit = null, best = Infinity;
+  nodes.forEach(n => {
+    if (!visibleNode(n)) return;
+    const d = Math.hypot(n.x - wx, n.y - wy);
+    if (d < Math.max(n.r + 4, 10 / view.scale) && d < best) { best = d; hit = n; }
+  });
+  return hit;
+}
+function edgeAt(px, py) {
+  const [wx, wy] = screenToWorld(px, py);
+  let hit = null, best = 5 / view.scale;
+  edges.forEach(e => {
+    if (!visibleEdge(e)) return;
+    const a = nodeById[e.source], b = nodeById[e.target];
+    const dx = b.x - a.x, dy = b.y - a.y, L = dx*dx + dy*dy || 1;
+    const t = Math.max(0, Math.min(1, ((wx - a.x) * dx + (wy - a.y) * dy) / L));
+    const d = Math.hypot(a.x + t * dx - wx, a.y + t * dy - wy);
+    if (d < best) { best = d; hit = e; }
+  });
+  return hit;
+}
+function showTip(px, py, html) {
+  if (!html) { tip.style.display = 'none'; return; }
+  tip.innerHTML = html; tip.style.display = 'block';
+  const w = canvas.parentElement.clientWidth;
+  tip.style.left = Math.max(6, Math.min(px + 14, w - tip.offsetWidth - 6)) + 'px'; tip.style.top = (py + 16) + 'px';
+}
+
+// pointer interaction (миша й дотик)
+let dragging = null, panStart = null, moved = false;
+canvas.addEventListener('pointerdown', ev => {
+  const rect = canvas.getBoundingClientRect();
+  const hit = nodeAt(ev.clientX - rect.left, ev.clientY - rect.top);
+  moved = false;
+  canvas.setPointerCapture(ev.pointerId);
+  if (hit) dragging = hit;
+  else { panStart = {x: ev.clientX, y: ev.clientY, ox: view.ox, oy: view.oy}; canvas.classList.add('dragging'); }
+});
+canvas.addEventListener('pointermove', ev => {
+  const rect = canvas.getBoundingClientRect();
+  const px = ev.clientX - rect.left, py = ev.clientY - rect.top;
+  if (dragging) {
+    if (Math.abs(ev.movementX) + Math.abs(ev.movementY) > 0) moved = true;
+    const [wx, wy] = screenToWorld(px, py);
+    dragging.x = wx; dragging.y = wy;
+    showTip(0, 0, null); draw();
+  } else if (panStart) {
+    if (Math.hypot(ev.clientX - panStart.x, ev.clientY - panStart.y) > 3) moved = true;
+    view.ox = panStart.ox + (ev.clientX - panStart.x) * dpr();
+    view.oy = panStart.oy + (ev.clientY - panStart.y) * dpr();
+    draw();
+  } else {
+    const n = nodeAt(px, py), e = n ? null : edgeAt(px, py);
+    if (n !== hoverNode || e !== hoverEdge) { hoverNode = n; hoverEdge = e; draw(); }
+    canvas.style.cursor = n ? 'pointer' : 'grab';
+    if (n) showTip(px, py, `<b>${esc(n.label)}</b><br><span class="muted">${esc(n.id)} · ${esc(IND[n.id].primaryType)} · зв'язків: ${degree[n.id] || 0}</span>`);
+    else if (e) {
+      const l = relLetter(e.rel);
+      showTip(px, py, `${esc(IND[e.source].label)} <b style="color:${relColor(e.rel)}">—${esc(l || e.rel)}→</b> ${esc(IND[e.target].label)}` +
+        `<br><span class="muted">swe:${esc(e.rel)}${l ? ' · ' + esc(UZ_NAME[l] || '') : ''}</span>`);
+    } else showTip(0, 0, null);
+  }
+});
+canvas.addEventListener('pointerleave', () => { hoverNode = hoverEdge = null; showTip(0, 0, null); draw(); });
+canvas.addEventListener('pointerup', () => {
+  if (dragging && !moved) select(dragging.id);
+  else if (panStart && !moved) unselect();
+  dragging = null; panStart = null; canvas.classList.remove('dragging');
+});
+canvas.addEventListener('wheel', ev => {
+  ev.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  const px = ev.clientX - rect.left, py = ev.clientY - rect.top;
+  const before = screenToWorld(px, py);
+  view.scale = Math.max(0.15, Math.min(6, view.scale * (ev.deltaY < 0 ? 1.12 : 0.89)));
+  const after = screenToWorld(px, py);
+  view.ox += (after[0] - before[0]) * view.scale * dpr();
+  view.oy += (after[1] - before[1]) * view.scale * dpr();
+  draw();
+}, {passive: false});
+
+// ---------- init ----------
+readHash();
+showView(state.view);
+if (state.node && (IND[state.node] || DATA.classes[state.node])) select(state.node);
+</script>
+</body>
+</html>

@@ -1,0 +1,1147 @@
+@prefix swe:  <http://kai.edu.ua/ontology/ipz-swebok-v4#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:  <http://purl.org/dc/terms/> .
+
+#################################################################
+# Онтологія ПрО «Інженерія програмного забезпечення» на основі
+# SWEBOK Guide v4.0 (IEEE CS, 2024). Лабораторна робота № 2 з ОІПЗ.
+# Згенеровано скриптом ontology/generate_ttl.py з ontology/data.py.
+#################################################################
+
+<http://kai.edu.ua/ontology/ipz-swebok-v4> a owl:Ontology ;
+    rdfs:label "Системна онтологія ІПЗ на основі SWEBOK Guide v4.0"@uk ;
+    rdfs:comment "Онтологія O = (X, R, F, A): X — класи та індивіди; R — об'єктні властивості (УЗ ЛПМ); F — анотації rdfs:label/rdfs:comment/rdfs:seeAlso; A — аксіоми. В OWL виражено: A1 (диз'юнктність складових Ос, функціональність belongsTo, еквівалентність класів KA обмеженням belongsTo), A2 (транзитивність а, х). A3 (ациклічність) і A6 (деревоподібність) перевіряє ontology/check.py: OWL 2 DL забороняє асиметричність і обмеження кардинальності на транзитивних властивостях."@uk ;
+    dct:source "Guide to the Software Engineering Body of Knowledge, Version 4.0 / ed. H. Washizaki. IEEE Computer Society, 2024."@en ;
+    owl:versionInfo "1.1 (2026-09-24)" .
+
+#################################################################
+# 1. Класи верхнього рівня — системна онтологія Ос = (Oо, Oп, Oз)
+#################################################################
+
+swe:Concept a owl:Class ;
+    rdfs:label "Концепт ПрО ІПЗ"@uk ;
+    rdfs:comment "Елемент множини X онтології O = (X, R, F, A) (лекція 2, сл. 14)."@uk .
+
+swe:PrimaryConcept a owl:Class ; rdfs:subClassOf swe:Concept ;
+    rdfs:label "Первинне (аксіоматичне) поняття"@uk ;
+    rdfs:comment "Поняття суміжних ПрО — аксіоматичний шар ЛПМ (лекція 2, сл. 21–22)."@uk .
+swe:BasicConcept a owl:Class ; rdfs:subClassOf swe:Concept ;
+    rdfs:label "Базове поняття ПрО ІПЗ"@uk ;
+    rdfs:comment "Утворене з первинних через УЗ — базовий шар ЛПМ."@uk .
+swe:DerivedConcept a owl:Class ; rdfs:subClassOf swe:Concept ;
+    rdfs:label "Похідне поняття"@uk ;
+    rdfs:comment "Утворене з базових/первинних через УЗ — шар похідних понять ЛПМ."@uk .
+
+swe:KnowledgeArea a owl:Class ; rdfs:subClassOf swe:DerivedConcept ;
+    rdfs:label "Область знань SWEBOK (Knowledge Area)"@uk ;
+    rdfs:comment "Ідентифікована область інженерії ПЗ, що визначається вимогами до знань і описується у термінах складових процесів, практик, входів, виходів, інструментів і технік (SWEBOK v4.0, с. xxv)."@uk .
+
+swe:SystemOntologyComponent a owl:Class ;
+    rdfs:label "Складова системної онтології"@uk .
+swe:ProcessOntology a owl:Class ; rdfs:subClassOf swe:SystemOntologyComponent ;
+    rdfs:label "Онтологія процесів Oп"@uk ;
+    rdfs:comment "Ієрархічна структура процесів, підпроцесів, дій і операцій (лекція 2, сл. 15)."@uk .
+swe:ObjectOntology a owl:Class ; rdfs:subClassOf swe:SystemOntologyComponent ;
+    rdfs:label "Онтологія об'єктів Oо"@uk ;
+    rdfs:comment "Ієрархічна структура класів, підкласів та елементів класів понять, на які посилаються Oп і Oз."@uk .
+swe:TaskOntology a owl:Class ; rdfs:subClassOf swe:SystemOntologyComponent ;
+    rdfs:label "Онтологія задач Oз"@uk ;
+    rdfs:comment "Ієрархічна структура задач, підзадач, процедур і операторів."@uk .
+[] a owl:AllDisjointClasses ; owl:members ( swe:ProcessOntology swe:ObjectOntology swe:TaskOntology ) .
+
+# Класи-члени складових Ос (аксіома A1: KA належить рівно одній складовій)
+swe:ProcessKA a owl:Class ; rdfs:subClassOf swe:KnowledgeArea ;
+    rdfs:label "Процесна область знань (член Oп)"@uk ;
+    owl:equivalentClass [ a owl:Class ; owl:intersectionOf ( swe:KnowledgeArea
+        [ a owl:Restriction ; owl:onProperty swe:belongsTo ; owl:hasValue swe:ProcessOntologyOfIPZ ] ) ] .
+swe:ObjectKA a owl:Class ; rdfs:subClassOf swe:KnowledgeArea ;
+    rdfs:label "Об'єктна область знань (член Oо)"@uk ;
+    owl:equivalentClass [ a owl:Class ; owl:intersectionOf ( swe:KnowledgeArea
+        [ a owl:Restriction ; owl:onProperty swe:belongsTo ; owl:hasValue swe:ObjectOntologyOfIPZ ] ) ] .
+swe:TaskKA a owl:Class ; rdfs:subClassOf swe:KnowledgeArea ;
+    rdfs:label "Задачна область знань (член Oз)"@uk ;
+    owl:equivalentClass [ a owl:Class ; owl:intersectionOf ( swe:KnowledgeArea
+        [ a owl:Restriction ; owl:onProperty swe:belongsTo ; owl:hasValue swe:TaskOntologyOfIPZ ] ) ] .
+[] a owl:AllDisjointClasses ; owl:members ( swe:ProcessKA swe:ObjectKA swe:TaskKA ) .
+
+# Ієрархія онтології процесів (лекція 2, сл. 15) та класи процесів (лекція 3, сл. 6)
+swe:Process a owl:Class ; rdfs:subClassOf swe:Concept ;
+    rdfs:label "Процес"@uk ;
+    rdfs:comment "Фіксовані в часі зміни станів виокремленої сукупності сутностей (лекція 3, сл. 6, 8)."@uk .
+swe:ActivityProcess a owl:Class ; rdfs:subClassOf swe:Process ; rdfs:label "Процес діяльності"@uk .
+swe:PurposefulProcess a owl:Class ; rdfs:subClassOf swe:ActivityProcess ; rdfs:label "Доцільний процес діяльності"@uk .
+swe:ProductionProcess a owl:Class ; rdfs:subClassOf swe:PurposefulProcess ; rdfs:label "Продуктовий виробничий процес"@uk .
+swe:ProjectProcess a owl:Class ; rdfs:subClassOf swe:ProductionProcess ; rdfs:label "Процес-проєкт"@uk .
+swe:SoftwareEngineeringProcess a owl:Class ; rdfs:subClassOf swe:ProductionProcess ;
+    rdfs:label "Процес програмної інженерії (процес ПІ)"@uk ;
+    rdfs:comment "Продуктовий процес, об'єктом діяльності якого є програмні продукти (лекція 3, сл. 6, 10). Операційні процеси мають сервісний, а не проєктний характер (SWEBOK v4.0, с. 6-6), тому клас підпорядковано ProductionProcess."@uk .
+swe:SubProcess a owl:Class ; rdfs:subClassOf swe:Process ; rdfs:label "Підпроцес"@uk .
+swe:Action a owl:Class ; rdfs:subClassOf swe:Process ; rdfs:label "Дія"@uk .
+swe:Operation a owl:Class ; rdfs:subClassOf swe:Process ; rdfs:label "Операція"@uk .
+swe:FundamentalAction a owl:Class ; rdfs:subClassOf swe:Action ;
+    rdfs:label "Наскрізна базова дія"@uk ;
+    rdfs:comment "Дія з розділу Fundamentals, яка використовується у кількох підпроцесах (аксіома A6)."@uk .
+swe:PracticalConsideration a owl:Class ; rdfs:subClassOf swe:Concept ;
+    rdfs:label "Практичне міркування (модифікатор процесу)"@uk .
+swe:Tool a owl:Class ; rdfs:subClassOf swe:Concept ;
+    rdfs:label "Інструментальний засіб (механізм процесу, член Oо)"@uk .
+swe:SystemicUnion a owl:Class ; rdfs:subClassOf swe:DerivedConcept ;
+    rdfs:label "Системологічне поєднання"@uk ;
+    rdfs:comment "Нове поняття С, яке не є простою сумою складових понять (лекція 2, сл. 27, УЗ типу s)."@uk .
+
+# Концепти онтології процесу (лекція 3, сл. 8–9) — властивості даних паспорта процесу
+swe:hasInput a owl:AnnotationProperty ; rdfs:label "входи процесу"@uk .
+swe:hasOutput a owl:AnnotationProperty ; rdfs:label "виходи процесу"@uk .
+swe:hasMechanism a owl:AnnotationProperty ; rdfs:label "механізми процесу"@uk .
+swe:hasEnvironment a owl:AnnotationProperty ; rdfs:label "середовище процесу"@uk .
+swe:hasTechnology a owl:AnnotationProperty ; rdfs:label "технологія процесу"@uk .
+swe:hasGoal a owl:AnnotationProperty ; rdfs:label "цілі процесу"@uk .
+swe:hasMetric a owl:AnnotationProperty ; rdfs:label "метрики процесу"@uk .
+swe:hasIndicator a owl:AnnotationProperty ; rdfs:label "показники процесу"@uk .
+swe:notation a owl:AnnotationProperty ; rdfs:label "позначення в тексті роботи"@uk .
+
+#################################################################
+# 2. Об'єктні властивості — уніфіковані зв'язки ЛПМ (лекція 2, сл. 27)
+#################################################################
+
+swe:unifiedLink a owl:ObjectProperty ;
+    rdfs:label "уніфікований зв'язок (УЗ)"@uk ;
+    rdfs:domain swe:Concept ; rdfs:range swe:Concept .
+
+swe:isPropertyOf a owl:ObjectProperty ; rdfs:subPropertyOf swe:unifiedLink ;
+    rdfs:label "ознака, властивість (о): A є ознакою B"@uk .
+swe:isPartOf a owl:ObjectProperty , owl:TransitiveProperty ; rdfs:subPropertyOf swe:unifiedLink ;
+    rdfs:label "складова (а): A є складовою B"@uk ;
+    rdfs:comment "Транзитивна (лекція 2, сл. 21); ациклічна за аксіомою A3."@uk .
+swe:isKindOf a owl:ObjectProperty , owl:TransitiveProperty ; rdfs:subPropertyOf swe:unifiedLink ;
+    rdfs:label "різновид (х): A є різновидом B"@uk .
+swe:hasInstance a owl:ObjectProperty ; rdfs:subPropertyOf swe:unifiedLink ;
+    rdfs:label "клас (к): B є екземпляром класу A"@uk .
+swe:systemicUnionOf a owl:ObjectProperty ; rdfs:subPropertyOf swe:unifiedLink ;
+    rdfs:label "системологічне поєднання (s): C утворене поєднанням A, B, …"@uk .
+swe:usedIn a owl:ObjectProperty ;
+    rdfs:label "використовується у (наскрізна дія → дія/підпроцес)"@uk .
+swe:appliesTo a owl:ObjectProperty ;
+    rdfs:label "застосовується до (практичне міркування → процес)"@uk .
+swe:belongsTo a owl:ObjectProperty , owl:FunctionalProperty ;
+    rdfs:label "належить до складової Ос (аксіома A1)"@uk ;
+    rdfs:domain swe:Concept ; rdfs:range swe:SystemOntologyComponent .
+swe:processRoleLink a owl:ObjectProperty ;
+    rdfs:label "роль KA у паспорті процесу (IDEF0: вхід, механізм, середовище) — не УЗ ЛПМ"@uk ;
+    rdfs:domain swe:Process ; rdfs:range swe:KnowledgeArea .
+swe:hasInputFrom a owl:ObjectProperty ; rdfs:subPropertyOf swe:processRoleLink ; rdfs:label "отримує вхід від"@uk .
+swe:hasMechanismFrom a owl:ObjectProperty ; rdfs:subPropertyOf swe:processRoleLink ; rdfs:label "використовує механізм з"@uk .
+swe:hasEnvironmentFrom a owl:ObjectProperty ; rdfs:subPropertyOf swe:processRoleLink ; rdfs:label "виконується в середовищі, заданому"@uk .
+swe:swebokSection a owl:DatatypeProperty ; rdfs:label "розділ SWEBOK v4.0"@uk ; rdfs:range xsd:string .
+swe:swebokPage a owl:DatatypeProperty ; rdfs:label "сторінка SWEBOK v4.0"@uk ; rdfs:range xsd:string .
+swe:kaNumber a owl:DatatypeProperty ; rdfs:label "номер області знань"@uk ; rdfs:range xsd:integer .
+
+#################################################################
+# 3. Складові системної онтології (індивіди)
+#################################################################
+
+swe:ProcessOntologyOfIPZ a swe:ProcessOntology , owl:NamedIndividual ;
+    rdfs:label "Онтологія процесів Oп"@uk .
+
+swe:ObjectOntologyOfIPZ a swe:ObjectOntology , owl:NamedIndividual ;
+    rdfs:label "Онтологія об'єктів Oо"@uk .
+
+swe:TaskOntologyOfIPZ a swe:TaskOntology , owl:NamedIndividual ;
+    rdfs:label "Онтологія задач Oз"@uk .
+
+
+#################################################################
+# 4. Первинні та базові поняття (індивіди шарів ЛПМ)
+#################################################################
+
+swe:P_S a swe:PrimaryConcept , owl:NamedIndividual ;
+    rdfs:label "Система"@uk ;
+    rdfs:comment "Множина взаємозв'язаних елементів, виокремлена із середовища, яка взаємодіє з ним як єдине ціле"@uk ;
+    rdfs:seeAlso "Теорія систем; Л2 сл. 25; KA 16 §1 (с. 16-2)"@uk .
+
+swe:P_e a swe:PrimaryConcept , owl:NamedIndividual ;
+    rdfs:label "Елемент"@uk ;
+    rdfs:comment "Самостійна частина деякого цілого, системи"@uk ;
+    rdfs:seeAlso "Теорія систем; Л2 сл. 25"@uk .
+
+swe:P_P a swe:PrimaryConcept , owl:NamedIndividual ;
+    rdfs:label "Взаємодія"@uk ;
+    rdfs:comment "Процес впливу об'єктів один на одного, що супроводжується переміщенням енергії, речовини, інформації"@uk ;
+    rdfs:seeAlso "Теорія систем; Л2 сл. 25"@uk .
+
+swe:P_c a swe:PrimaryConcept , owl:NamedIndividual ;
+    rdfs:label "Середовище"@uk ;
+    rdfs:comment "Сукупність об'єктів, зміна властивостей яких впливає на систему, і тих, чиї властивості змінюються під впливом системи"@uk ;
+    rdfs:seeAlso "Теорія систем; Л2 сл. 25"@uk .
+
+swe:P_D a swe:PrimaryConcept , owl:NamedIndividual ;
+    rdfs:label "Стан системи"@uk ;
+    rdfs:comment "Сукупність властивостей і параметрів системи у фіксований момент часу"@uk ;
+    rdfs:seeAlso "Теорія систем; Л2 сл. 25"@uk .
+
+swe:P_Pr a swe:PrimaryConcept , owl:NamedIndividual ;
+    rdfs:label "Процес"@uk ;
+    rdfs:comment "Зафіксовані у часовому вимірі зміни станів системи, обумовлені внутрішніми та зовнішніми взаємодіями"@uk ;
+    rdfs:seeAlso "Л3 сл. 8; KA 18 §1 (с. 18-1)"@uk .
+
+swe:P_G a swe:PrimaryConcept , owl:NamedIndividual ;
+    rdfs:label "Ціль"@uk ;
+    rdfs:comment "Бажаний стан або область станів системи"@uk ;
+    rdfs:seeAlso "Теорія управління; Л2 сл. 26; Л3 сл. 9"@uk .
+
+swe:P_U a swe:PrimaryConcept , owl:NamedIndividual ;
+    rdfs:label "Управління"@uk ;
+    rdfs:comment "Процес впливу суб'єкта управління на об'єкт управління для досягнення визначеної мети"@uk ;
+    rdfs:seeAlso "Теорія управління; Л2 сл. 26"@uk .
+
+swe:P_I a swe:PrimaryConcept , owl:NamedIndividual ;
+    rdfs:label "Інформація"@uk ;
+    rdfs:comment "Відомості, що зменшують невизначеність стану об'єкта"@uk ;
+    rdfs:seeAlso "Теорія інформації; Л2 сл. 22"@uk .
+
+swe:P_d a swe:PrimaryConcept , owl:NamedIndividual ;
+    rdfs:label "Дані"@uk ;
+    rdfs:comment "Формалізоване подання інформації, придатне для обробки"@uk ;
+    rdfs:seeAlso "KA 16 §3, §6 (с. 16-6, 16-17)"@uk .
+
+swe:P_C a swe:PrimaryConcept , owl:NamedIndividual ;
+    rdfs:label "Обчислення"@uk ;
+    rdfs:comment "Перетворення даних за алгоритмом на обчислювальній машині"@uk ;
+    rdfs:seeAlso "KA 16 §2–§4 (с. 16-3…16-10)"@uk .
+
+swe:P_A a swe:PrimaryConcept , owl:NamedIndividual ;
+    rdfs:label "Алгоритм"@uk ;
+    rdfs:comment "Скінченна послідовність інструкцій перетворення даних"@uk ;
+    rdfs:seeAlso "KA 16 §3 (с. 16-6)"@uk .
+
+swe:P_M a swe:PrimaryConcept , owl:NamedIndividual ;
+    rdfs:label "Модель"@uk ;
+    rdfs:comment "Абстрактне подання системи, що зберігає її суттєві властивості"@uk ;
+    rdfs:seeAlso "KA 18 §6 (с. 18-8); KA 11 §1 (с. 11-1)"@uk .
+
+swe:P_m a swe:PrimaryConcept , owl:NamedIndividual ;
+    rdfs:label "Вимірювання"@uk ;
+    rdfs:comment "Приписування чисел властивостям об'єктів за правилами"@uk ;
+    rdfs:seeAlso "KA 18 §7 (с. 18-10)"@uk .
+
+swe:P_SetRelationFunction a swe:PrimaryConcept , owl:NamedIndividual ;
+    rdfs:label "Множина, відношення, функція"@uk ;
+    rdfs:comment "Базові математичні структури"@uk ;
+    rdfs:seeAlso "KA 17 §3 (с. 17-5)"@uk .
+
+swe:P_r a swe:PrimaryConcept , owl:NamedIndividual ;
+    rdfs:label "Ризик"@uk ;
+    rdfs:comment "Поєднання ймовірності події та її наслідків"@uk ;
+    rdfs:seeAlso "KA 9 §2.5; KA 15 §9; Л2 сл. 30"@uk .
+
+swe:P_Cost a swe:PrimaryConcept , owl:NamedIndividual ;
+    rdfs:label "Вартість"@uk ;
+    rdfs:comment "Грошова міра ресурсів, витрачених на отримання результату"@uk ;
+    rdfs:seeAlso "KA 15 §1 (с. 15-3)"@uk .
+
+swe:P_H a swe:PrimaryConcept , owl:NamedIndividual ;
+    rdfs:label "Людина (суб'єкт діяльності)"@uk ;
+    rdfs:comment "Носій цілей, знань і активної діяльності у процесах"@uk ;
+    rdfs:seeAlso "Л3 сл. 6, 8; KA 16 §8 (с. 16-24)"@uk .
+
+swe:B_SW a swe:BasicConcept , owl:NamedIndividual ;
+    rdfs:label "Програмне забезпечення (ПЗ)"@uk ;
+    rdfs:comment "Упорядкована множина машинних кодів разом із артефактами, що забезпечують їх розроблення, впровадження і використання"@uk ;
+    swe:lpmFormula "(х) S; (а) d, A"@uk ;
+    rdfs:seeAlso "Л1 сл. 14, 17, 19; SEVOCAB"@uk .
+
+swe:B_SP a swe:BasicConcept , owl:NamedIndividual ;
+    rdfs:label "Програмний продукт"@uk ;
+    rdfs:comment "Завершене програмне рішення, готове до використання; цільовий результат процесів ІПЗ"@uk ;
+    swe:lpmFormula "(х) SW"@uk ;
+    rdfs:seeAlso "Л1 сл. 16"@uk .
+
+swe:B_SH a swe:BasicConcept , owl:NamedIndividual ;
+    rdfs:label "Стейкхолдер"@uk ;
+    rdfs:comment "Людина або організація, що має інтерес до результату процесу"@uk ;
+    swe:lpmFormula "(х) H; (о) G"@uk ;
+    rdfs:seeAlso "KA 1 §2.1; KA 2 §1.2 (с. 2-3)"@uk .
+
+swe:B_Rq a swe:BasicConcept , owl:NamedIndividual ;
+    rdfs:label "Вимога"@uk ;
+    rdfs:comment "Властивість, яку має виявляти ПЗ для розв'язання задачі стейкхолдера"@uk ;
+    swe:lpmFormula "(о) SH; —о→ SP"@uk ;
+    rdfs:seeAlso "KA 1 §1.1 (с. 1-2)"@uk .
+
+swe:B_PI a swe:BasicConcept , owl:NamedIndividual ;
+    rdfs:label "Процес інженерії ПЗ (процес ПІ)"@uk ;
+    rdfs:comment "Доцільний продуктовий процес діяльності, об'єктом якого є програмний продукт"@uk ;
+    swe:lpmFormula "(х) Pr; (о) H, G, SP"@uk ;
+    rdfs:seeAlso "Л3 сл. 6, 10; KA 10 §1.2 (с. 10-3)"@uk .
+
+swe:B_Pj a swe:BasicConcept , owl:NamedIndividual ;
+    rdfs:label "Проєкт"@uk ;
+    rdfs:comment "Сукупність дій з визначеними термінами для створення продукту відповідно до ресурсів і вимог"@uk ;
+    swe:lpmFormula "(х) PI"@uk ;
+    rdfs:seeAlso "Л3 сл. 11; ISO/IEC/IEEE 12207"@uk .
+
+swe:B_LC a swe:BasicConcept , owl:NamedIndividual ;
+    rdfs:label "Життєвий цикл ПЗ"@uk ;
+    rdfs:comment "Упорядкована сукупність процесів від задуму до виведення з експлуатації"@uk ;
+    swe:lpmFormula "(а) PI; (о) D"@uk ;
+    rdfs:seeAlso "KA 10 §2.1 (с. 10-3)"@uk .
+
+swe:B_Af a swe:BasicConcept , owl:NamedIndividual ;
+    rdfs:label "Артефакт"@uk ;
+    rdfs:comment "Матеріальний або інформаційний результат процесу ПІ (специфікація, модель, код, збірка)"@uk ;
+    swe:lpmFormula "(х) d, M"@uk ;
+    rdfs:seeAlso "Л3 сл. 11 (вихід процесу)"@uk .
+
+swe:B_Cfg a swe:BasicConcept , owl:NamedIndividual ;
+    rdfs:label "Конфігурація ПЗ"@uk ;
+    rdfs:comment "Сукупність ідентифікованих елементів ПЗ у фіксованому стані"@uk ;
+    swe:lpmFormula "(а) SW, Af, e; (о) D"@uk ;
+    rdfs:seeAlso "KA 8 §2 (с. 8-6)"@uk .
+
+swe:B_Q a swe:BasicConcept , owl:NamedIndividual ;
+    rdfs:label "Якість ПЗ"@uk ;
+    rdfs:comment "Ступінь відповідності ПЗ потребам стейкхолдерів; сукупність характеристик"@uk ;
+    swe:lpmFormula "(о) Rq; —о→ SP"@uk ;
+    rdfs:seeAlso "KA 12 §1 (с. 12-3)"@uk .
+
+swe:B_Sec a swe:BasicConcept , owl:NamedIndividual ;
+    rdfs:label "Безпека ПЗ"@uk ;
+    rdfs:comment "Здатність ПЗ захищати інформацію та дані від несанкціонованих дій"@uk ;
+    swe:lpmFormula "(х) Q"@uk ;
+    rdfs:seeAlso "KA 13 §1 (с. 13-1)"@uk .
+
+swe:B_Eng a swe:BasicConcept , owl:NamedIndividual ;
+    rdfs:label "Інженер ПЗ (фахівець)"@uk ;
+    rdfs:comment "Суб'єкт професійної діяльності, який реалізує процеси ПІ"@uk ;
+    swe:lpmFormula "(х) H; (о) PI"@uk ;
+    rdfs:seeAlso "Л2 сл. 33; KA 14 §1"@uk .
+
+swe:B_T a swe:BasicConcept , owl:NamedIndividual ;
+    rdfs:label "Інструментальний засіб"@uk ;
+    rdfs:comment "Програмний засіб, який автоматизує дії процесів ПІ"@uk ;
+    swe:lpmFormula "(х) SW; —а→ PI"@uk ;
+    rdfs:seeAlso "Л2 сл. 32"@uk .
+
+swe:B_Mt a swe:BasicConcept , owl:NamedIndividual ;
+    rdfs:label "Метод ІПЗ"@uk ;
+    rdfs:comment "Упорядкований спосіб виконання дій процесу ПІ"@uk ;
+    swe:lpmFormula "(х) M; —а→ PI"@uk ;
+    rdfs:seeAlso "KA 11 §4 (с. 11-7)"@uk .
+
+swe:B_Std a swe:BasicConcept , owl:NamedIndividual ;
+    rdfs:label "Стандарт"@uk ;
+    rdfs:comment "Нормативний документ, що фіксує узгоджені вимоги до процесів або продуктів"@uk ;
+    swe:lpmFormula "(х) I; (о) Rq"@uk ;
+    rdfs:seeAlso "KA 18 §8 (с. 18-15); Л2 сл. 37"@uk .
+
+swe:B_OE a swe:BasicConcept , owl:NamedIndividual ;
+    rdfs:label "Середовище експлуатації"@uk ;
+    rdfs:comment "Інфраструктура (ОС, СКБД, сервери, хмарні платформи), в якій функціонує програмний продукт"@uk ;
+    swe:lpmFormula "(х) c; (а) SW"@uk ;
+    rdfs:seeAlso "KA 6 §1.1 (с. 6-3), §2.2 (с. 6-7); KA 16 §5–§6"@uk .
+
+swe:B_Sv a swe:BasicConcept , owl:NamedIndividual ;
+    rdfs:label "Сервіс (операційна послуга)"@uk ;
+    rdfs:comment "Результат операційного процесу, що споживається користувачами за узгодженим рівнем (SLA)"@uk ;
+    swe:lpmFormula "(s) SP, OE, Q"@uk ;
+    rdfs:seeAlso "KA 6 §2.3 (с. 6-8); ISO/IEC 20000-1:2018"@uk .
+
+swe:B_Ef a swe:BasicConcept , owl:NamedIndividual ;
+    rdfs:label "Ефективність процесу"@uk ;
+    rdfs:comment "Властивість процесу формувати цільові результати співвіднесено з ресурсами"@uk ;
+    swe:lpmFormula "(о) $; —о→ PI"@uk ;
+    rdfs:seeAlso "Л3 сл. 9; KA 15 §10.5 (с. 15-17)"@uk .
+
+swe:lpmFormula a owl:AnnotationProperty ; rdfs:label "формула утворення поняття через УЗ"@uk .
+
+
+#################################################################
+# 5. Області знань SWEBOK v4.0 — 18 похідних концептів
+#################################################################
+
+swe:KA1 a swe:ProcessKA , swe:SoftwareEngineeringProcess , owl:NamedIndividual ;
+    rdfs:label "Вимоги до ПЗ"@uk , "Software Requirements"@en ;
+    swe:kaNumber 1 ;
+    swe:belongsTo swe:ProcessOntologyOfIPZ ;
+    swe:swebokSection "Chapter 1" ;
+    swe:swebokPage "1-1" ;
+    rdfs:seeAlso "SWEBOK Guide v4.0, глава 1, с. 1-1"@uk .
+
+swe:KA2 a swe:ProcessKA , swe:SoftwareEngineeringProcess , owl:NamedIndividual ;
+    rdfs:label "Архітектура ПЗ"@uk , "Software Architecture"@en ;
+    swe:kaNumber 2 ;
+    swe:belongsTo swe:ProcessOntologyOfIPZ ;
+    swe:swebokSection "Chapter 2" ;
+    swe:swebokPage "2-1" ;
+    rdfs:seeAlso "SWEBOK Guide v4.0, глава 2, с. 2-1"@uk .
+
+swe:KA3 a swe:ProcessKA , swe:SoftwareEngineeringProcess , owl:NamedIndividual ;
+    rdfs:label "Проєктування ПЗ"@uk , "Software Design"@en ;
+    swe:kaNumber 3 ;
+    swe:belongsTo swe:ProcessOntologyOfIPZ ;
+    swe:swebokSection "Chapter 3" ;
+    swe:swebokPage "3-1" ;
+    rdfs:seeAlso "SWEBOK Guide v4.0, глава 3, с. 3-1"@uk .
+
+swe:KA4 a swe:ProcessKA , swe:SoftwareEngineeringProcess , owl:NamedIndividual ;
+    rdfs:label "Конструювання ПЗ"@uk , "Software Construction"@en ;
+    swe:kaNumber 4 ;
+    swe:belongsTo swe:ProcessOntologyOfIPZ ;
+    swe:swebokSection "Chapter 4" ;
+    swe:swebokPage "4-1" ;
+    rdfs:seeAlso "SWEBOK Guide v4.0, глава 4, с. 4-1"@uk .
+
+swe:KA5 a swe:ProcessKA , swe:SoftwareEngineeringProcess , owl:NamedIndividual ;
+    rdfs:label "Тестування ПЗ"@uk , "Software Testing"@en ;
+    swe:kaNumber 5 ;
+    swe:belongsTo swe:ProcessOntologyOfIPZ ;
+    swe:swebokSection "Chapter 5" ;
+    swe:swebokPage "5-1" ;
+    rdfs:seeAlso "SWEBOK Guide v4.0, глава 5, с. 5-1"@uk .
+
+swe:KA6 a swe:ProcessKA , swe:SoftwareEngineeringProcess , owl:NamedIndividual ;
+    rdfs:label "Операції інженерії ПЗ"@uk , "Software Engineering Operations"@en ;
+    swe:kaNumber 6 ;
+    swe:belongsTo swe:ProcessOntologyOfIPZ ;
+    swe:swebokSection "Chapter 6" ;
+    swe:swebokPage "6-1" ;
+    rdfs:seeAlso "SWEBOK Guide v4.0, глава 6, с. 6-1"@uk .
+
+swe:KA7 a swe:ProcessKA , swe:SoftwareEngineeringProcess , owl:NamedIndividual ;
+    rdfs:label "Супроводження ПЗ"@uk , "Software Maintenance"@en ;
+    swe:kaNumber 7 ;
+    swe:belongsTo swe:ProcessOntologyOfIPZ ;
+    swe:swebokSection "Chapter 7" ;
+    swe:swebokPage "7-1" ;
+    rdfs:seeAlso "SWEBOK Guide v4.0, глава 7, с. 7-1"@uk .
+
+swe:KA8 a swe:ProcessKA , swe:SoftwareEngineeringProcess , owl:NamedIndividual ;
+    rdfs:label "Управління конфігурацією ПЗ"@uk , "Software Configuration Management"@en ;
+    swe:kaNumber 8 ;
+    swe:belongsTo swe:ProcessOntologyOfIPZ ;
+    swe:swebokSection "Chapter 8" ;
+    swe:swebokPage "8-1" ;
+    rdfs:seeAlso "SWEBOK Guide v4.0, глава 8, с. 8-1"@uk .
+
+swe:KA9 a swe:ProcessKA , swe:SoftwareEngineeringProcess , owl:NamedIndividual ;
+    rdfs:label "Управління інженерією ПЗ"@uk , "Software Engineering Management"@en ;
+    swe:kaNumber 9 ;
+    swe:belongsTo swe:ProcessOntologyOfIPZ ;
+    swe:swebokSection "Chapter 9" ;
+    swe:swebokPage "9-1" ;
+    rdfs:seeAlso "SWEBOK Guide v4.0, глава 9, с. 9-1"@uk .
+
+swe:KA10 a swe:ProcessKA , swe:SoftwareEngineeringProcess , owl:NamedIndividual ;
+    rdfs:label "Процес інженерії ПЗ"@uk , "Software Engineering Process"@en ;
+    swe:kaNumber 10 ;
+    swe:belongsTo swe:ProcessOntologyOfIPZ ;
+    swe:swebokSection "Chapter 10" ;
+    swe:swebokPage "10-1" ;
+    rdfs:seeAlso "SWEBOK Guide v4.0, глава 10, с. 10-1"@uk .
+
+swe:KA11 a swe:ObjectKA , owl:NamedIndividual ;
+    rdfs:label "Моделі та методи інженерії ПЗ"@uk , "Software Engineering Models and Methods"@en ;
+    swe:kaNumber 11 ;
+    swe:belongsTo swe:ObjectOntologyOfIPZ ;
+    swe:swebokSection "Chapter 11" ;
+    swe:swebokPage "11-1" ;
+    rdfs:seeAlso "SWEBOK Guide v4.0, глава 11, с. 11-1"@uk .
+
+swe:KA12 a swe:ObjectKA , owl:NamedIndividual ;
+    rdfs:label "Якість ПЗ"@uk , "Software Quality"@en ;
+    swe:kaNumber 12 ;
+    swe:belongsTo swe:ObjectOntologyOfIPZ ;
+    swe:swebokSection "Chapter 12" ;
+    swe:swebokPage "12-1" ;
+    rdfs:seeAlso "SWEBOK Guide v4.0, глава 12, с. 12-1"@uk .
+
+swe:KA13 a swe:ObjectKA , owl:NamedIndividual ;
+    rdfs:label "Безпека ПЗ"@uk , "Software Security"@en ;
+    swe:kaNumber 13 ;
+    swe:belongsTo swe:ObjectOntologyOfIPZ ;
+    swe:swebokSection "Chapter 13" ;
+    swe:swebokPage "13-1" ;
+    rdfs:seeAlso "SWEBOK Guide v4.0, глава 13, с. 13-1"@uk .
+
+swe:KA14 a swe:TaskKA , owl:NamedIndividual ;
+    rdfs:label "Професійна практика інженерії ПЗ"@uk , "Software Engineering Professional Practice"@en ;
+    swe:kaNumber 14 ;
+    swe:belongsTo swe:TaskOntologyOfIPZ ;
+    swe:swebokSection "Chapter 14" ;
+    swe:swebokPage "14-1" ;
+    rdfs:seeAlso "SWEBOK Guide v4.0, глава 14, с. 14-1"@uk .
+
+swe:KA15 a swe:TaskKA , owl:NamedIndividual ;
+    rdfs:label "Економіка інженерії ПЗ"@uk , "Software Engineering Economics"@en ;
+    swe:kaNumber 15 ;
+    swe:belongsTo swe:TaskOntologyOfIPZ ;
+    swe:swebokSection "Chapter 15" ;
+    swe:swebokPage "15-1" ;
+    rdfs:seeAlso "SWEBOK Guide v4.0, глава 15, с. 15-1"@uk .
+
+swe:KA16 a swe:ObjectKA , owl:NamedIndividual ;
+    rdfs:label "Основи обчислень"@uk , "Computing Foundations"@en ;
+    swe:kaNumber 16 ;
+    swe:belongsTo swe:ObjectOntologyOfIPZ ;
+    swe:swebokSection "Chapter 16" ;
+    swe:swebokPage "16-1" ;
+    rdfs:seeAlso "SWEBOK Guide v4.0, глава 16, с. 16-1"@uk .
+
+swe:KA17 a swe:ObjectKA , owl:NamedIndividual ;
+    rdfs:label "Математичні основи"@uk , "Mathematical Foundations"@en ;
+    swe:kaNumber 17 ;
+    swe:belongsTo swe:ObjectOntologyOfIPZ ;
+    swe:swebokSection "Chapter 17" ;
+    swe:swebokPage "17-1" ;
+    rdfs:seeAlso "SWEBOK Guide v4.0, глава 17, с. 17-1"@uk .
+
+swe:KA18 a swe:ObjectKA , owl:NamedIndividual ;
+    rdfs:label "Інженерні основи"@uk , "Engineering Foundations"@en ;
+    swe:kaNumber 18 ;
+    swe:belongsTo swe:ObjectOntologyOfIPZ ;
+    swe:swebokSection "Chapter 18" ;
+    swe:swebokPage "18-1" ;
+    rdfs:seeAlso "SWEBOK Guide v4.0, глава 18, с. 18-1"@uk .
+
+
+#################################################################
+# 6. Уніфіковані зв'язки між областями знань (табл. 3.5, додаток Б)
+#################################################################
+
+swe:KA2 swe:isKindOf swe:KA3 .  # х: Архітектура — різновид (високорівневе) проєктування [KA 2 §3.1.1 Relation of Architecture to Design (с. 2-9); KA 3 §2.1 High-Level Design (с. 3-6)]
+swe:KA13 swe:isKindOf swe:KA12 .  # х: Безпека — різновид атрибута якості ПЗ [KA 13 §1.1 Software Security (с. 13-1): «security is a product quality characteristic»; KA 3 §3.7 Assurance, Security, and Safety (с. 3-7)]
+swe:KA12 swe:isPropertyOf swe:KA1 .  # о: Якість — властивість вимог та їх процесу [KA 1 §1.7 Quality of Service Constraints (с. 1-4); §7.6 Requirements Process Quality (с. 1-19)]
+swe:KA12 swe:isPropertyOf swe:KA3 .  # о: Якість — властивість проєктних рішень [KA 3 §3 Software Design Qualities (с. 3-6); §6 Quality Analysis and Evaluation (с. 3-13)]
+swe:KA12 swe:isPropertyOf swe:KA4 .  # о: Якість — властивість конструювання [KA 4 §3.6 Construction Quality (с. 4-8)]
+swe:KA12 swe:isPropertyOf swe:KA5 .  # о: Характеристики якості — об'єкт оцінювання тестуванням [KA 5 §1.2.6 Testing for Quality Assurance/Improvement (с. 5-4)]
+swe:KA12 swe:isPropertyOf swe:KA6 .  # о: Доступність і неперервність — нефункціональні властивості, керовані операціями [KA 6 §2.3 Software Availability, Continuity, and Service Levels (с. 6-8)]
+swe:KA13 swe:isPropertyOf swe:KA3 .  # о: Безпека — властивість проєктних рішень [KA 3 §3.7 Assurance, Security, and Safety (с. 3-7)]
+swe:KA13 swe:isPropertyOf swe:KA5 .  # о: Безпека — ціль тестування [KA 5 §2.2.8 Security Testing (с. 5-9)]
+swe:KA13 swe:isPropertyOf swe:KA6 .  # о: Безпека — властивість операційного середовища (DevSecOps) [KA 6 §2.6 Software and Data Safety, Security … (с. 6-9)]
+swe:KA15 swe:isPropertyOf swe:KA9 .  # о: Економічна ефективність — властивість управлінських рішень [KA 9 §2.3 Effort, Schedule, and Cost Estimation (с. 9-8); KA 15 §8 Estimation (с. 15-13)]
+swe:KA14 swe:isPropertyOf swe:KA9 .  # о: Професійні компетенції — властивість виконавців проєкту [KA 14 §2.1 Dynamics of Working in Teams/Groups (с. 14-9); KA 9 §2.4 Resource Allocation (с. 9-9)]
+swe:KA15 swe:isPropertyOf swe:KA14 .  # о: Економічна обґрунтованість — ознака професійних рішень інженера (аналіз ризиків, витрат і вигод) [KA 14 §1.5 Economic Impact of Software (с. 14-5); §1.9 Trade-Off Analysis (с. 14-9)]
+swe:KA8 swe:isPartOf swe:KA6 .  # а: Керування конфігурацією, збирання, пакування — складова планування операцій [KA 6 рис. 6.2 (с. 6-4); §3.2 Deployment/Release Engineering → SCM KA (с. 6-10)]
+swe:KA8 swe:isPartOf swe:KA9 .  # а: Керування конфігурацією — складова управління проєктом [KA 9 §2 Software Project Planning (с. 9-7) → SCM KA; KA 10 §2.1 (с. 10-4): configuration management — технічний управлінський процес]
+swe:KA17 swe:isPartOf swe:KA11 .  # а: Математичні структури — складова моделей ІПЗ [KA 17 §3 Set, Relation, Function (с. 17-5); §5 Finite-State Machine (с. 17-12); KA 11 §2 Types of Models (с. 11-4)]
+swe:KA17 swe:isPartOf swe:KA16 .  # а: Графи, дерева, логіка — складова структур даних і алгоритмів [KA 17 §4 Graph and Tree (с. 17-8); KA 16 §3 Data Structures and Algorithms (с. 16-6)]
+swe:KA16 swe:isPartOf swe:KA4 .  # а: Мови програмування — складова конструювання [KA 16 §4 Programming Fundamentals and Languages (с. 16-10); KA 4 §3.2 Construction Languages (с. 4-6)]
+swe:KA16 swe:isPartOf swe:KA6 .  # а: ОС, СКБД — складова операційного середовища [KA 16 §5 Operating Systems (с. 16-15), §6 Database Management (с. 16-17); KA 6 §1.1 (с. 6-3), §6.4 (с. 6-14)]
+swe:KA18 swe:isPartOf swe:KA9 .  # а: Вимірювання — складова управління інженерією ПЗ [KA 18 §7 Measurement (с. 18-10); KA 9 §6 Software Engineering Measurement (с. 9-14)]
+swe:KA10 swe:hasInstance swe:KA1 .  # к: Процес інженерії ПЗ — клас; процес вимог — екземпляр [KA 10 §2.1 Life Cycle Definition, Process Categories (с. 10-4)]
+swe:KA10 swe:hasInstance swe:KA2 .  # к: Процес інженерії ПЗ — клас; процес архітектури — екземпляр [KA 10 §2.1 (с. 10-3); KA 2 §3 Software Architecture Process (с. 2-8)]
+swe:KA10 swe:hasInstance swe:KA3 .  # к: Процес інженерії ПЗ — клас; процес проєктування — екземпляр [KA 10 §2.1 (с. 10-3); KA 3 §2 Software Design Processes (с. 3-5)]
+swe:KA10 swe:hasInstance swe:KA4 .  # к: Процес інженерії ПЗ — клас; конструювання — екземпляр [KA 10 §2.1 (с. 10-3); KA 4 §2.1 Construction in Life Cycle Models (с. 4-4)]
+swe:KA10 swe:hasInstance swe:KA5 .  # к: Процес інженерії ПЗ — клас; процес тестування — екземпляр [KA 10 §2.1 (с. 10-3); KA 5 §5 Test Process (с. 5-18)]
+swe:KA10 swe:hasInstance swe:KA6 .  # к: Процес інженерії ПЗ — клас; операційний процес — екземпляр [KA 10 §2.1 (с. 10-3); KA 6 §1.2 Operations Processes (с. 6-4)]
+swe:KA10 swe:hasInstance swe:KA7 .  # к: Процес інженерії ПЗ — клас; процес супроводження — екземпляр [KA 10 §2.1 (с. 10-3); KA 7 §3 Software Maintenance Processes (с. 7-11)]
+swe:KA10 swe:hasInstance swe:KA8 .  # к: Процес інженерії ПЗ — клас; процес SCM — екземпляр [KA 10 §2.1 (с. 10-3); KA 8 §1 Management of the SCM Process (с. 8-2)]
+swe:KA10 swe:hasInstance swe:KA9 .  # к: Процес інженерії ПЗ — клас; управлінський процес — екземпляр [KA 10 §2.1: technical management processes — project planning, assessment and control (с. 10-4)]
+swe:KA11 swe:hasInstance swe:KA1 .  # к: Моделі ІПЗ — клас; моделі вимог — екземпляр [KA 11 §2 Types of Models (с. 11-4); KA 1 §4.4 Model-Based Requirements Specification (с. 1-14)]
+swe:KA11 swe:hasInstance swe:KA2 .  # к: Моделі ІПЗ — клас; мови опису архітектури — екземпляр [KA 11 §1 Modeling (с. 11-1); KA 2 §2.3 Architecture Description Languages (с. 2-7)]
+swe:KA11 swe:hasInstance swe:KA3 .  # к: Методи ІПЗ — клас; методи проєктування — екземпляр [KA 11 §4 Software Engineering Methods (с. 11-7); KA 3 §5 Design Strategies and Methods (с. 3-11)]
+swe:KA11 swe:hasInstance swe:KA5 .  # к: Методи ІПЗ — клас; техніки тестування — екземпляр [KA 11 §4 (с. 11-7); KA 5 §3 Test Techniques (с. 5-10)]
+swe:KA18 swe:hasInstance swe:KA10 .  # к: Інженерний процес — клас; процес інженерії ПЗ — екземпляр [KA 18 §1 The Engineering Process (с. 18-1); KA 10 §1.2 (с. 10-3)]
+swe:KA18 swe:hasInstance swe:KA3 .  # к: Інженерне проєктування — клас; проєктування ПЗ — екземпляр [KA 18 §2 Engineering Design (с. 18-2); KA 3 §1 (с. 3-2)]
+
+#################################################################
+# 6а. Зв'язки шарів ЛПМ: первинні → базові → KA (формули табл. 3.1, 3.3)
+#################################################################
+
+swe:B_SW swe:isKindOf swe:P_S .
+swe:P_d swe:isPartOf swe:B_SW .
+swe:P_A swe:isPartOf swe:B_SW .
+swe:B_SP swe:isKindOf swe:B_SW .
+swe:B_SH swe:isKindOf swe:P_H .
+swe:P_G swe:isPropertyOf swe:B_SH .
+swe:B_SH swe:isPropertyOf swe:B_Rq .
+swe:B_Rq swe:isPropertyOf swe:B_SP .
+swe:B_PI swe:isKindOf swe:P_Pr .
+swe:P_H swe:isPropertyOf swe:B_PI .
+swe:P_G swe:isPropertyOf swe:B_PI .
+swe:B_SP swe:isPropertyOf swe:B_PI .
+swe:B_Pj swe:isKindOf swe:B_PI .
+swe:B_PI swe:isPartOf swe:B_LC .
+swe:P_D swe:isPropertyOf swe:B_LC .
+swe:B_Af swe:isKindOf swe:P_d .
+swe:B_Af swe:isKindOf swe:P_M .
+swe:B_SW swe:isPartOf swe:B_Cfg .
+swe:B_Af swe:isPartOf swe:B_Cfg .
+swe:P_e swe:isPartOf swe:B_Cfg .
+swe:P_D swe:isPropertyOf swe:B_Cfg .
+swe:B_Rq swe:isPropertyOf swe:B_Q .
+swe:B_Q swe:isPropertyOf swe:B_SP .
+swe:B_Sec swe:isKindOf swe:B_Q .
+swe:B_Eng swe:isKindOf swe:P_H .
+swe:B_PI swe:isPropertyOf swe:B_Eng .
+swe:B_T swe:isKindOf swe:B_SW .
+swe:B_T swe:isPartOf swe:B_PI .
+swe:B_Mt swe:isKindOf swe:P_M .
+swe:B_Mt swe:isPartOf swe:B_PI .
+swe:B_Std swe:isKindOf swe:P_I .
+swe:B_Rq swe:isPropertyOf swe:B_Std .
+swe:B_OE swe:isKindOf swe:P_c .
+swe:B_SW swe:isPartOf swe:B_OE .
+swe:B_Sv swe:systemicUnionOf swe:B_SP .
+swe:B_Sv swe:systemicUnionOf swe:B_OE .
+swe:B_Sv swe:systemicUnionOf swe:B_Q .
+swe:P_Cost swe:isPropertyOf swe:B_Ef .
+swe:B_Ef swe:isPropertyOf swe:B_PI .
+swe:KA1 swe:isKindOf swe:B_PI .
+swe:B_Rq swe:isPartOf swe:KA1 .
+swe:B_SH swe:isPartOf swe:KA1 .
+swe:B_Af swe:isPartOf swe:KA1 .
+swe:B_Q swe:isPropertyOf swe:KA1 .
+swe:KA2 swe:isKindOf swe:B_PI .
+swe:B_Af swe:isPartOf swe:KA2 .
+swe:B_SH swe:isPartOf swe:KA2 .
+swe:B_Mt swe:isPartOf swe:KA2 .
+swe:KA3 swe:isKindOf swe:B_PI .
+swe:B_Rq swe:isPartOf swe:KA3 .
+swe:B_Af swe:isPartOf swe:KA3 .
+swe:B_Mt swe:isPartOf swe:KA3 .
+swe:B_Q swe:isPropertyOf swe:KA3 .
+swe:B_Sec swe:isPropertyOf swe:KA3 .
+swe:KA4 swe:isKindOf swe:B_PI .
+swe:B_Af swe:isPartOf swe:KA4 .
+swe:B_T swe:isPartOf swe:KA4 .
+swe:B_Std swe:isPartOf swe:KA4 .
+swe:B_Q swe:isPropertyOf swe:KA4 .
+swe:KA5 swe:isKindOf swe:B_PI .
+swe:B_Af swe:isPartOf swe:KA5 .
+swe:B_T swe:isPartOf swe:KA5 .
+swe:B_Mt swe:isPartOf swe:KA5 .
+swe:B_Q swe:isPropertyOf swe:KA5 .
+swe:B_Sec swe:isPropertyOf swe:KA5 .
+swe:KA6 swe:isKindOf swe:B_PI .
+swe:B_OE swe:isPartOf swe:KA6 .
+swe:B_Sv swe:isPartOf swe:KA6 .
+swe:B_T swe:isPartOf swe:KA6 .
+swe:B_Cfg swe:isPartOf swe:KA6 .
+swe:B_Q swe:isPropertyOf swe:KA6 .
+swe:B_Sec swe:isPropertyOf swe:KA6 .
+swe:KA7 swe:isKindOf swe:B_PI .
+swe:B_SP swe:isPartOf swe:KA7 .
+swe:B_Rq swe:isPartOf swe:KA7 .
+swe:B_Sv swe:isPartOf swe:KA7 .
+swe:KA8 swe:isKindOf swe:B_PI .
+swe:B_Cfg swe:isPartOf swe:KA8 .
+swe:B_Af swe:isPartOf swe:KA8 .
+swe:B_T swe:isPartOf swe:KA8 .
+swe:KA9 swe:isKindOf swe:B_PI .
+swe:KA9 swe:isKindOf swe:P_U .
+swe:B_Pj swe:isPartOf swe:KA9 .
+swe:B_Eng swe:isPartOf swe:KA9 .
+swe:P_Cost swe:isPartOf swe:KA9 .
+swe:P_r swe:isPartOf swe:KA9 .
+swe:P_m swe:isPartOf swe:KA9 .
+swe:KA10 swe:isKindOf swe:B_PI .
+swe:B_LC swe:isPartOf swe:KA10 .
+swe:B_Std swe:isPartOf swe:KA10 .
+swe:KA11 swe:isKindOf swe:B_Mt .
+swe:KA11 swe:isKindOf swe:P_M .
+swe:KA12 swe:isKindOf swe:B_Q .
+swe:KA13 swe:isKindOf swe:B_Sec .
+swe:B_Eng swe:isPropertyOf swe:KA14 .
+swe:B_Std swe:isPartOf swe:KA14 .
+swe:P_P swe:isPartOf swe:KA14 .
+swe:P_Cost swe:isPartOf swe:KA15 .
+swe:P_r swe:isPartOf swe:KA15 .
+swe:B_Ef swe:isPartOf swe:KA15 .
+swe:P_m swe:isPartOf swe:KA15 .
+swe:P_C swe:isPartOf swe:KA16 .
+swe:P_A swe:isPartOf swe:KA16 .
+swe:P_d swe:isPartOf swe:KA16 .
+swe:B_OE swe:isPartOf swe:KA16 .
+swe:P_SetRelationFunction swe:isPartOf swe:KA17 .
+swe:P_Pr swe:isPartOf swe:KA18 .
+swe:P_M swe:isPartOf swe:KA18 .
+swe:P_m swe:isPartOf swe:KA18 .
+swe:B_Std swe:isPartOf swe:KA18 .
+
+swe:Union1 a swe:SystemicUnion , owl:NamedIndividual ;
+    rdfs:label "Життєвий цикл програмного забезпечення"@uk ;
+    rdfs:seeAlso "KA 10 §2 Life Cycles (с. 10-3); ISO/IEC/IEEE 12207:2017"@uk ;
+    swe:systemicUnionOf swe:KA1 ;
+    swe:systemicUnionOf swe:KA2 ;
+    swe:systemicUnionOf swe:KA3 ;
+    swe:systemicUnionOf swe:KA4 ;
+    swe:systemicUnionOf swe:KA5 ;
+    swe:systemicUnionOf swe:KA6 ;
+    swe:systemicUnionOf swe:KA7 .
+
+swe:Union2 a swe:SystemicUnion , owl:NamedIndividual ;
+    rdfs:label "DevOps / конвеєр неперервної доставки (CI/CD)"@uk ;
+    rdfs:seeAlso "KA 6 Introduction (с. 6-1…6-2); §6 Software Engineering Operations Tools (с. 6-13)"@uk ;
+    swe:systemicUnionOf swe:KA4 ;
+    swe:systemicUnionOf swe:KA5 ;
+    swe:systemicUnionOf swe:KA6 ;
+    swe:systemicUnionOf swe:KA8 .
+
+swe:Union3 a swe:SystemicUnion , owl:NamedIndividual ;
+    rdfs:label "DevSecOps"@uk ;
+    rdfs:seeAlso "KA 6 §2.6 (с. 6-9)"@uk ;
+    swe:systemicUnionOf swe:KA6 ;
+    swe:systemicUnionOf swe:KA13 .
+
+swe:Union4 a swe:SystemicUnion , owl:NamedIndividual ;
+    rdfs:label "Експлуатація та супроводження (O&M): спільний план операцій і супроводження"@uk ;
+    rdfs:seeAlso "KA 6 §2.1.1 Operations Plan (с. 6-6); ISO/IEC 20000-1:2018 [6]"@uk ;
+    swe:systemicUnionOf swe:KA6 ;
+    swe:systemicUnionOf swe:KA7 .
+
+swe:Union5 a swe:SystemicUnion , owl:NamedIndividual ;
+    rdfs:label "Фундаментальний базис ІПЗ (foundation KAs)"@uk ;
+    rdfs:seeAlso "Introduction to the Guide, табл. I.1 (с. xxxix)"@uk ;
+    swe:systemicUnionOf swe:KA16 ;
+    swe:systemicUnionOf swe:KA17 ;
+    swe:systemicUnionOf swe:KA18 .
+
+
+#################################################################
+# 7. Декомпозиція KA 6 «Software Engineering Operations» (розділ 4)
+#################################################################
+
+swe:KA6 swe:notation "P6" ;
+    rdfs:comment "the set of activities and tasks necessary to deploy, operate and support a software application or system while preserving its integrity and stability"@en ;
+    swe:hasInput "release candidate від KA 4; нефункціональні вимоги; запити на зміни та звіти про проблеми; бізнес-прогнози; угоди з постачальниками"@uk ;
+    swe:hasOutput "розгорнутий продукт; операційний сервіс за SLA; сервісні звіти; записи інцидентів/проблем/змін; телеметрія та KPI; плани"@uk ;
+    swe:hasMechanism "інженери операцій та інженери ПЗ; контейнери й віртуалізація; засоби розгортання; автоматизоване тестування; моніторинг і телеметрія"@uk ;
+    swe:hasEnvironment "середовища розроблення, QA, передпродуктивне, продуктивне; ІТ-інфраструктура; IaaS/PaaS; постачальники"@uk ;
+    swe:hasTechnology "DevOps, IaC, PaC, CI/CD, SRE, Platform Engineering, ITIL/ISO/IEC 20000-1"@uk ;
+    swe:hasGoal "цілісність і стабільність системи; досягнення цільових рівнів обслуговування; мінімізація порушень від інцидентів"@uk ;
+    swe:hasMetric "доступність; навантаження; продуктивність; обсяг транзакцій; використання ресурсів; кількість інцидентів"@uk ;
+    swe:hasIndicator "KPI у реальному часі за §4.2: телеметрія, результати V&V, активність користувачів, залежності, зміни конфігурації, безпека і стійкість"@uk .
+
+swe:P6_1 a swe:SubProcess , owl:NamedIndividual ;
+    rdfs:label "Планування операцій"@uk , "Software Engineering Operations Planning"@en ;
+    swe:isPartOf swe:KA6 ;
+    swe:swebokSection "§2" ; swe:swebokPage "6-6" ;
+    rdfs:comment "Стадія: pre-delivery"@uk .
+
+swe:P6_1_1 a swe:Action , owl:NamedIndividual ;
+    rdfs:label "Розроблення плану операцій"@uk , "Operations Plan"@en ;
+    swe:isPartOf swe:P6_1 ;
+    swe:swebokSection "§2.1.1" ; swe:swebokPage "6-6" .
+
+swe:P6_1_1_1 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Розроблення концепт-документа (concept document)"@uk ;
+    swe:isPartOf swe:P6_1_1 ;
+    swe:swebokSection "§2.1.1" ; swe:swebokPage "6-6" .
+swe:P6_1_1_2 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Розроблення плану операцій і супроводження (обсяг, адаптація процесу й інструментів, організація, оцінка витрат)"@uk ;
+    swe:isPartOf swe:P6_1_1 ;
+    swe:swebokSection "§2.1.1" ; swe:swebokPage "6-6" .
+swe:P6_1_1_3 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Формування концепції операцій (CONOPS): порядок подання запитів на зміни та звітів про проблеми"@uk ;
+    swe:isPartOf swe:P6_1_1 ;
+    swe:swebokSection "§2.1.1" ; swe:swebokPage "6-6" .
+swe:P6_1_1_4 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Планування релізів/версій: дати доступності, склад релізу, конфлікти, ризик релізу та план відкату, інформування стейкхолдерів"@uk ;
+    swe:isPartOf swe:P6_1_1 ;
+    swe:swebokSection "§2.1.1" ; swe:swebokPage "6-7" .
+swe:P6_1_1_5 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Бізнес-планування операційної організації (бюджет, фінанси, кадри)"@uk ;
+    swe:isPartOf swe:P6_1_1 ;
+    swe:swebokSection "§2.1.1" ; swe:swebokPage "6-7" .
+
+swe:P6_1_2 a swe:Action , owl:NamedIndividual ;
+    rdfs:label "Керування постачальниками"@uk , "Supplier Management"@en ;
+    swe:isPartOf swe:P6_1 ;
+    swe:swebokSection "§2.1.2" ; swe:swebokPage "6-7" .
+
+swe:P6_1_2_1 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Укладання угод на придбання продуктів/послуг постачальників"@uk ;
+    swe:isPartOf swe:P6_1_2 ;
+    swe:swebokSection "§2.1.2" ; swe:swebokPage "6-7" .
+swe:P6_1_2_2 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Керування аутсорсинговими та хмарними (IaaS, PaaS) послугами"@uk ;
+    swe:isPartOf swe:P6_1_2 ;
+    swe:swebokSection "§2.1.2" ; swe:swebokPage "6-7" .
+
+swe:P6_1_3 a swe:Action , owl:NamedIndividual ;
+    rdfs:label "Формування середовищ розроблення та експлуатації"@uk , "Development and Operational Environments"@en ;
+    swe:isPartOf swe:P6_1 ;
+    swe:swebokSection "§2.2" ; swe:swebokPage "6-7" .
+
+swe:P6_1_3_1 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Визначення середовищ: розроблення, тестування (QA), передпродуктивне, продуктивне"@uk ;
+    swe:isPartOf swe:P6_1_3 ;
+    swe:swebokSection "§2.2" ; swe:swebokPage "6-7" .
+swe:P6_1_3_2 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Забезпечення узгодженості та синхронізації середовищ із продуктивним"@uk ;
+    swe:isPartOf swe:P6_1_3 ;
+    swe:swebokSection "§2.2" ; swe:swebokPage "6-8" .
+swe:P6_1_3_3 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Автоматизоване створення середовищ з єдиного репозиторію коду (IaC)"@uk ;
+    swe:isPartOf swe:P6_1_3 ;
+    swe:swebokSection "§2.2" ; swe:swebokPage "6-8" .
+
+swe:P6_1_4 a swe:Action , owl:NamedIndividual ;
+    rdfs:label "Керування доступністю, неперервністю та рівнями обслуговування"@uk , "Software Availability, Continuity, and Service Levels"@en ;
+    swe:isPartOf swe:P6_1 ;
+    swe:swebokSection "§2.3" ; swe:swebokPage "6-8" .
+
+swe:P6_1_4_1 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Планування, проєктування, реалізація і тестування інфраструктури доступності"@uk ;
+    swe:isPartOf swe:P6_1_4 ;
+    swe:swebokSection "§2.3" ; swe:swebokPage "6-8" .
+swe:P6_1_4_2 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Вимірювання та реєстрація доступності; розслідування позапланової недоступності"@uk ;
+    swe:isPartOf swe:P6_1_4 ;
+    swe:swebokSection "§2.3" ; swe:swebokPage "6-8" .
+swe:P6_1_4_3 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Визначення, узгодження і документування SLA"@uk ;
+    swe:isPartOf swe:P6_1_4 ;
+    swe:swebokSection "§2.3" ; swe:swebokPage "6-8" .
+swe:P6_1_4_4 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Моніторинг узгодженого рівня обслуговування (навантаження, продуктивність, тренди, задоволеність)"@uk ;
+    swe:isPartOf swe:P6_1_4 ;
+    swe:swebokSection "§2.3" ; swe:swebokPage "6-8" .
+
+swe:P6_1_5 a swe:Action , owl:NamedIndividual ;
+    rdfs:label "Керування потужністю"@uk , "Software Capacity Management"@en ;
+    swe:isPartOf swe:P6_1 ;
+    swe:swebokSection "§2.4" ; swe:swebokPage "6-8" .
+
+swe:P6_1_5_1 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Переведення бізнес-прогнозів і оцінок навантаження у вимоги до потужності"@uk ;
+    swe:isPartOf swe:P6_1_5 ;
+    swe:swebokSection "§2.4" ; swe:swebokPage "6-8" .
+swe:P6_1_5_2 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Збирання й аналіз даних про використання ресурсів"@uk ;
+    swe:isPartOf swe:P6_1_5 ;
+    swe:swebokSection "§2.4" ; swe:swebokPage "6-8" .
+swe:P6_1_5_3 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Розроблення плану потужності (не рідше ніж щорічно) з вартісними варіантами"@uk ;
+    swe:isPartOf swe:P6_1_5 ;
+    swe:swebokSection "§2.4" ; swe:swebokPage "6-8" .
+
+swe:P6_1_6 a swe:Action , owl:NamedIndividual ;
+    rdfs:label "Резервне копіювання, відновлення після аварій, відмовостійкість"@uk , "Software Backup, Disaster Recovery, and Failover"@en ;
+    swe:isPartOf swe:P6_1 ;
+    swe:swebokSection "§2.5" ; swe:swebokPage "6-8" .
+
+swe:P6_1_6_1 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Вибір методів резервного копіювання (повне/інкрементне), точок відновлення, місця та терміну зберігання"@uk ;
+    swe:isPartOf swe:P6_1_6 ;
+    swe:swebokSection "§2.5" ; swe:swebokPage "6-9" .
+swe:P6_1_6_2 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Регулярна репетиція резервування, відновлення та failover"@uk ;
+    swe:isPartOf swe:P6_1_6 ;
+    swe:swebokSection "§2.5" ; swe:swebokPage "6-9" .
+swe:P6_1_6_3 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Тестування відновлення: зупинення сервісу, фіксація контрольної точки, запуск failover"@uk ;
+    swe:isPartOf swe:P6_1_6 ;
+    swe:swebokSection "§2.5" ; swe:swebokPage "6-9" .
+swe:P6_1_6_4 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Упровадження автоматичних failover-демонів та логіки обробки відмов"@uk ;
+    swe:isPartOf swe:P6_1_6 ;
+    swe:swebokSection "§2.5" ; swe:swebokPage "6-9" .
+
+swe:P6_1_7 a swe:Action , owl:NamedIndividual ;
+    rdfs:label "Забезпечення безпеки, цілісності та захисту ПЗ і даних"@uk , "Software and Data Safety, Security, Integrity, Protection, and Controls"@en ;
+    swe:isPartOf swe:P6_1 ;
+    swe:swebokSection "§2.6" ; swe:swebokPage "6-9" .
+
+swe:P6_1_7_1 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Оцінювання ризиків безпеки та доступності інформації"@uk ;
+    swe:isPartOf swe:P6_1_7 ;
+    swe:swebokSection "§2.6" ; swe:swebokPage "6-9" .
+swe:P6_1_7_2 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Упровадження контролів a–g: політика ІБ, ролі, моніторинг, навчання, обізнаність, експертна підтримка, безпечні зміни"@uk ;
+    swe:isPartOf swe:P6_1_7 ;
+    swe:swebokSection "§2.6" ; swe:swebokPage "6-9" .
+swe:P6_1_7_3 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Інтеграція механізмів безпеки в операційний рівень (DevSecOps)"@uk ;
+    swe:isPartOf swe:P6_1_7 ;
+    swe:swebokSection "§2.6" ; swe:swebokPage "6-9" .
+
+swe:P6_2 a swe:SubProcess , owl:NamedIndividual ;
+    rdfs:label "Доставка (розгортання) операцій"@uk , "Software Engineering Operations Delivery"@en ;
+    swe:isPartOf swe:KA6 ;
+    swe:swebokSection "§3" ; swe:swebokPage "6-9" ;
+    rdfs:comment "Стадія: delivery"@uk .
+
+swe:P6_2_1 a swe:Action , owl:NamedIndividual ;
+    rdfs:label "Операційне тестування, верифікація та приймання"@uk , "Operational Testing, Verification, and Acceptance"@en ;
+    swe:isPartOf swe:P6_2 ;
+    swe:swebokSection "§3.1" ; swe:swebokPage "6-9" .
+
+swe:P6_2_1_1 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Планування і виконання верифікації з використанням TDD"@uk ;
+    swe:isPartOf swe:P6_2_1 ;
+    swe:swebokSection "§3.1" ; swe:swebokPage "6-9" .
+swe:P6_2_1_2 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Приймальне тестування за ATDD"@uk ;
+    swe:isPartOf swe:P6_2_1 ;
+    swe:swebokSection "§3.1" ; swe:swebokPage "6-9" .
+swe:P6_2_1_3 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Автоматизація сервісів тестування та інтеграція інструментів (DevOps)"@uk ;
+    swe:isPartOf swe:P6_2_1 ;
+    swe:swebokSection "§3.1" ; swe:swebokPage "6-9" .
+
+swe:P6_2_2 a swe:Action , owl:NamedIndividual ;
+    rdfs:label "Інженерія розгортання та випуску"@uk , "Deployment/Release Engineering"@en ;
+    swe:isPartOf swe:P6_2 ;
+    swe:swebokSection "§3.2" ; swe:swebokPage "6-10" .
+
+swe:P6_2_2_1 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Ідентифікація і реєстрація запитів на випуск, визначення елементів, схвалення, відстеження (release control)"@uk ;
+    swe:isPartOf swe:P6_2_2 ;
+    swe:swebokSection "§3.2" ; swe:swebokPage "6-10" .
+swe:P6_2_2_2 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Пакування коду та генерування конфігураційних файлів"@uk ;
+    swe:isPartOf swe:P6_2_2 ;
+    swe:swebokSection "§3.2" ; swe:swebokPage "6-10" .
+swe:P6_2_2_3 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Конфігурування серверів і баз даних, перезапуск серверів"@uk ;
+    swe:isPartOf swe:P6_2_2 ;
+    swe:swebokSection "§3.2" ; swe:swebokPage "6-10" .
+swe:P6_2_2_4 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Інсталяція ПЗ на сервери (деінсталяція попередніх версій, каталоги, реєстр, змінні середовища, верифікація)"@uk ;
+    swe:isPartOf swe:P6_2_2 ;
+    swe:swebokSection "§1.3; 3.2" ; swe:swebokPage "6-5; 6-10" .
+swe:P6_2_2_5 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Запуск виконання застосунку та димове тестування (smoke testing)"@uk ;
+    swe:isPartOf swe:P6_2_2 ;
+    swe:swebokSection "§3.2" ; swe:swebokPage "6-10" .
+swe:P6_2_2_6 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Вибір стратегії випуску: середовищна (staging) або прикладна (feature toggles)"@uk ;
+    swe:isPartOf swe:P6_2_2 ;
+    swe:swebokSection "§3.2" ; swe:swebokPage "6-10" .
+swe:P6_2_2_7 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Канаркове тестування (canary release) з періодом валідації"@uk ;
+    swe:isPartOf swe:P6_2_2 ;
+    swe:swebokSection "§3.2" ; swe:swebokPage "6-10" .
+swe:P6_2_2_8 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Бізнес-рішення про випуск (release) функціональності користувачам"@uk ;
+    swe:isPartOf swe:P6_2_2 ;
+    swe:swebokSection "§3.2" ; swe:swebokPage "6-10" .
+
+swe:P6_2_3 a swe:Action , owl:NamedIndividual ;
+    rdfs:label "Відкат і міграція даних"@uk , "Rollback and Data Migration"@en ;
+    swe:isPartOf swe:P6_2 ;
+    swe:swebokSection "§3.3" ; swe:swebokPage "6-10" .
+
+swe:P6_2_3_1 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Планування та репетиція відкату до розгортання нової версії"@uk ;
+    swe:isPartOf swe:P6_2_3 ;
+    swe:swebokSection "§3.3" ; swe:swebokPage "6-10" .
+swe:P6_2_3_2 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Повернення ПЗ і бази даних до працездатного стану"@uk ;
+    swe:isPartOf swe:P6_2_3 ;
+    swe:swebokSection "§3.3" ; swe:swebokPage "6-10" .
+swe:P6_2_3_3 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Автоматичний запуск відкату за сигналами спостереження (surveillance)"@uk ;
+    swe:isPartOf swe:P6_2_3 ;
+    swe:swebokSection "§3.3" ; swe:swebokPage "6-10" .
+
+swe:P6_2_4 a swe:Action , owl:NamedIndividual ;
+    rdfs:label "Керування змінами"@uk , "Change Management"@en ;
+    swe:isPartOf swe:P6_2 ;
+    swe:swebokSection "§3.4" ; swe:swebokPage "6-11" .
+
+swe:P6_2_4_1 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Реєстрація і класифікація запитів на зміни (emergency, urgent, major, minor)"@uk ;
+    swe:isPartOf swe:P6_2_4 ;
+    swe:swebokSection "§3.4" ; swe:swebokPage "6-11" .
+swe:P6_2_4_2 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Оцінювання ризику зміни та потреби у стратегії відкату"@uk ;
+    swe:isPartOf swe:P6_2_4 ;
+    swe:swebokSection "§3.4" ; swe:swebokPage "6-11" .
+swe:P6_2_4_3 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Схвалення, упровадження та перегляд зміни; планування графіка змін"@uk ;
+    swe:isPartOf swe:P6_2_4 ;
+    swe:swebokSection "§3.4" ; swe:swebokPage "6-11" .
+swe:P6_2_4_4 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Доставка малих незалежних одиниць змін на вимогу (DevOps)"@uk ;
+    swe:isPartOf swe:P6_2_4 ;
+    swe:swebokSection "§3.4" ; swe:swebokPage "6-11" .
+
+swe:P6_2_5 a swe:Action , owl:NamedIndividual ;
+    rdfs:label "Керування проблемами"@uk , "Problem Management"@en ;
+    swe:isPartOf swe:P6_2 ;
+    swe:swebokSection "§3.5" ; swe:swebokPage "6-11" .
+
+swe:P6_2_5_1 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Ідентифікація та аналіз причин інцидентів і проблем"@uk ;
+    swe:isPartOf swe:P6_2_5 ;
+    swe:swebokSection "§3.5" ; swe:swebokPage "6-11" .
+swe:P6_2_5_2 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Розслідування повторюваних проблем міждисциплінарною командою"@uk ;
+    swe:isPartOf swe:P6_2_5 ;
+    swe:swebokSection "§3.5" ; swe:swebokPage "6-11" .
+swe:P6_2_5_3 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Моніторинг, журналювання та профілювання ПЗ і інфраструктури"@uk ;
+    swe:isPartOf swe:P6_2_5 ;
+    swe:swebokSection "§3.5" ; swe:swebokPage "6-11" .
+
+swe:P6_3 a swe:SubProcess , owl:NamedIndividual ;
+    rdfs:label "Контроль операцій"@uk , "Software Engineering Operations Control"@en ;
+    swe:isPartOf swe:KA6 ;
+    swe:swebokSection "§4" ; swe:swebokPage "6-11" ;
+    rdfs:comment "Стадія: post-delivery"@uk .
+
+swe:P6_3_1 a swe:Action , owl:NamedIndividual ;
+    rdfs:label "Керування інцидентами"@uk , "Incident Management"@en ;
+    swe:isPartOf swe:P6_3 ;
+    swe:swebokSection "§4.1" ; swe:swebokPage "6-11" .
+
+swe:P6_3_1_1 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Реєстрація інциденту"@uk ;
+    swe:isPartOf swe:P6_3_1 ;
+    swe:swebokSection "§4.1" ; swe:swebokPage "6-11" .
+swe:P6_3_1_2 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Пріоритизація та оцінювання впливу на бізнес"@uk ;
+    swe:isPartOf swe:P6_3_1 ;
+    swe:swebokSection "§4.1" ; swe:swebokPage "6-11" .
+swe:P6_3_1_3 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Розв'язання, ескалація та закриття інциденту"@uk ;
+    swe:isPartOf swe:P6_3_1 ;
+    swe:swebokSection "§4.1" ; swe:swebokPage "6-11" .
+swe:P6_3_1_4 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Автоматизоване спостереження (alerts, logs) для запобігання ескалації"@uk ;
+    swe:isPartOf swe:P6_3_1 ;
+    swe:swebokSection "§4.1" ; swe:swebokPage "6-11" .
+swe:P6_3_1_5 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Аналіз/post mortem та впровадження рішень проти повторення"@uk ;
+    swe:isPartOf swe:P6_3_1 ;
+    swe:swebokSection "§4.1" ; swe:swebokPage "6-11" .
+
+swe:P6_3_2 a swe:Action , owl:NamedIndividual ;
+    rdfs:label "Моніторинг, вимірювання, відстеження та перегляд"@uk , "Monitor, Measure, Track, and Review"@en ;
+    swe:isPartOf swe:P6_3 ;
+    swe:swebokSection "§4.2" ; swe:swebokPage "6-11" .
+
+swe:P6_3_2_1 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Моніторинг потужності, неперервності та доступності"@uk ;
+    swe:isPartOf swe:P6_3_2 ;
+    swe:swebokSection "§4.2" ; swe:swebokPage "6-11" .
+swe:P6_3_2_2 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Збирання KPI в реальному часі: телеметрія продукту, результати V&V, активність користувачів, ресурси"@uk ;
+    swe:isPartOf swe:P6_3_2 ;
+    swe:swebokSection "§4.2" ; swe:swebokPage "6-11" .
+swe:P6_3_2_3 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Відстеження залежностей, несхвалених змін конфігурації, показників безпеки та стійкості"@uk ;
+    swe:isPartOf swe:P6_3_2 ;
+    swe:swebokSection "§4.2" ; swe:swebokPage "6-11" .
+
+swe:P6_3_3 a swe:Action , owl:NamedIndividual ;
+    rdfs:label "Підтримка операцій"@uk , "Operations Support"@en ;
+    swe:isPartOf swe:P6_3 ;
+    swe:swebokSection "§4.3" ; swe:swebokPage "6-12" .
+
+swe:P6_3_3_1 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Експлуатація продукту у цільовому середовищі"@uk ;
+    swe:isPartOf swe:P6_3_3 ;
+    swe:swebokSection "§4.3" ; swe:swebokPage "6-12" .
+swe:P6_3_3_2 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Проактивний моніторинг та швидке реагування на події"@uk ;
+    swe:isPartOf swe:P6_3_3 ;
+    swe:swebokSection "§4.3" ; swe:swebokPage "6-12" .
+swe:P6_3_3_3 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Підтримка замовників відповідно до SLA"@uk ;
+    swe:isPartOf swe:P6_3_3 ;
+    swe:swebokSection "§4.3" ; swe:swebokPage "6-12" .
+
+swe:P6_3_4 a swe:Action , owl:NamedIndividual ;
+    rdfs:label "Звітування про операційні сервіси"@uk , "Operations Service Reporting"@en ;
+    swe:isPartOf swe:P6_3 ;
+    swe:swebokSection "§4.4" ; swe:swebokPage "6-12" .
+
+swe:P6_3_4_1 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Визначення наявності метрик і потреби в інструментуванні"@uk ;
+    swe:isPartOf swe:P6_3_4 ;
+    swe:swebokSection "§4.4" ; swe:swebokPage "6-12" .
+swe:P6_3_4_2 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Вибір/розроблення каркасу та інструментів вимірювання"@uk ;
+    swe:isPartOf swe:P6_3_4 ;
+    swe:swebokSection "§4.4" ; swe:swebokPage "6-12" .
+swe:P6_3_4_3 a swe:Operation , owl:NamedIndividual ;
+    rdfs:label "Формування сервісних звітів: виконання SLA, порушення безпеки, обсяг транзакцій, ресурси, інциденти, тренди, задоволеність"@uk ;
+    swe:isPartOf swe:P6_3_4 ;
+    swe:swebokSection "§4.4" ; swe:swebokPage "6-12" .
+
+swe:F6_3 a swe:FundamentalAction , owl:NamedIndividual ;
+    rdfs:label "Інсталяція ПЗ"@uk , "Software Installation"@en ;
+    swe:isPartOf swe:KA6 ;
+    swe:swebokSection "§1.3" ; swe:swebokPage "6-5" ;
+    swe:usedIn swe:P6_2_2 .
+
+swe:F6_4 a swe:FundamentalAction , owl:NamedIndividual ;
+    rdfs:label "Скриптування та автоматизація"@uk , "Scripting and Automating"@en ;
+    swe:isPartOf swe:KA6 ;
+    swe:swebokSection "§1.4" ; swe:swebokPage "6-5" ;
+    swe:usedIn swe:P6_1_3 ;
+    swe:usedIn swe:P6_2_2 ;
+    swe:usedIn swe:P6_3_1 .
+
+swe:F6_5 a swe:FundamentalAction , owl:NamedIndividual ;
+    rdfs:label "Ефективне тестування та усунення несправностей"@uk , "Effective Testing and Troubleshooting"@en ;
+    swe:isPartOf swe:KA6 ;
+    swe:swebokSection "§1.5" ; swe:swebokPage "6-5" ;
+    swe:usedIn swe:P6_2_1 ;
+    swe:usedIn swe:P6_2_5 ;
+    swe:usedIn swe:P6_3_1 .
+
+swe:F6_6 a swe:FundamentalAction , owl:NamedIndividual ;
+    rdfs:label "Продуктивність, надійність, балансування навантаження"@uk , "Performance, Reliability and Load Balancing"@en ;
+    swe:isPartOf swe:KA6 ;
+    swe:swebokSection "§1.6" ; swe:swebokPage "6-6" ;
+    swe:usedIn swe:P6_1_4 ;
+    swe:usedIn swe:P6_1_5 .
+
+swe:C6_1 a swe:PracticalConsideration , owl:NamedIndividual ;
+    rdfs:label "Запобігання інцидентам і проблемам"@uk , "Incident and Problem Prevention"@en ;
+    swe:swebokSection "§5.1" ; swe:swebokPage "6-12" ;
+    swe:appliesTo swe:P6_3 .
+
+swe:C6_2 a swe:PracticalConsideration , owl:NamedIndividual ;
+    rdfs:label "Керування операційними ризиками"@uk , "Operational Risk Management"@en ;
+    swe:swebokSection "§5.2" ; swe:swebokPage "6-12" ;
+    swe:appliesTo swe:P6_1 ;
+    swe:appliesTo swe:P6_3 .
+
+swe:C6_3 a swe:PracticalConsideration , owl:NamedIndividual ;
+    rdfs:label "Автоматизація операцій"@uk , "Automating Software Engineering Operations"@en ;
+    swe:swebokSection "§5.3" ; swe:swebokPage "6-12" ;
+    swe:appliesTo swe:P6_1 ;
+    swe:appliesTo swe:P6_2 ;
+    swe:appliesTo swe:P6_3 .
+
+swe:C6_4 a swe:PracticalConsideration , owl:NamedIndividual ;
+    rdfs:label "Операції у малих організаціях (ISO/IEC 29110)"@uk , "Software Engineering Operations for Small Organizations"@en ;
+    swe:swebokSection "§5.4" ; swe:swebokPage "6-13" ;
+    swe:appliesTo swe:KA6 .
+
+swe:T6_1 a swe:Tool , owl:NamedIndividual ;
+    rdfs:label "Контейнери та віртуалізація"@uk , "Containers and Virtualization"@en ;
+    swe:belongsTo swe:ObjectOntologyOfIPZ ;
+    swe:swebokSection "§6.1" ; swe:swebokPage "6-13" .
+
+swe:T6_2 a swe:Tool , owl:NamedIndividual ;
+    rdfs:label "Засоби розгортання"@uk , "Deployment"@en ;
+    swe:belongsTo swe:ObjectOntologyOfIPZ ;
+    swe:swebokSection "§6.2" ; swe:swebokPage "6-13" .
+
+swe:T6_3 a swe:Tool , owl:NamedIndividual ;
+    rdfs:label "Автоматизоване тестування"@uk , "Automated Test"@en ;
+    swe:belongsTo swe:ObjectOntologyOfIPZ ;
+    swe:swebokSection "§6.3" ; swe:swebokPage "6-14" .
+
+swe:T6_4 a swe:Tool , owl:NamedIndividual ;
+    rdfs:label "Моніторинг і телеметрія"@uk , "Monitoring and Telemetry"@en ;
+    swe:belongsTo swe:ObjectOntologyOfIPZ ;
+    swe:swebokSection "§6.4" ; swe:swebokPage "6-14" .
+
+
+# Ролі інших KA у паспорті процесу KA 6 (табл. 4.6). Зв'язки видів «складова», «клас», «ознака»,
+# «поєднання» з тієї ж таблиці вже є серед УЗ розділу 6 — їх збіг перевіряє ontology/check.py
+swe:KA6 swe:hasInputFrom swe:KA1 .  # вхід: Нефункціональні вимоги (продуктивність, надійність) [§1.6 (с. 6-6) → KA 1 §1.2–1.7]
+swe:KA6 swe:hasInputFrom swe:KA4 .  # вхід: Інтегроване, зібране, запаковане ПЗ (release candidate) [Introduction (с. 6-1); KA 4 §3.7 Integration]
+swe:KA6 swe:hasMechanismFrom swe:KA5 .  # механізм: Техніки тестування, TDD/ATDD, регресійне тестування [§1.5 (с. 6-5); §3.1 (с. 6-9)]
+swe:KA6 swe:hasEnvironmentFrom swe:KA9 .  # середовище: Бізнес-планування (бюджет, фінанси, кадри); керування постачальниками [§2.1.1 (с. 6-7); KA 9 §3.2]
