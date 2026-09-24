@@ -15,84 +15,149 @@
     rdfs:label "Системна онтологія ІПЗ на основі SWEBOK Guide v4.0"@uk ;
     rdfs:comment "Онтологія O = (X, R, F, A): X — класи та індивіди; R — об'єктні властивості (УЗ ЛПМ); F — анотації rdfs:label/rdfs:comment/rdfs:seeAlso; A — аксіоми. В OWL виражено: A1 (диз'юнктність складових Ос, функціональність belongsTo, еквівалентність класів KA обмеженням belongsTo), A2 (транзитивність а, х). A3 (ациклічність) і A6 (деревоподібність) перевіряє ontology/check.py: OWL 2 DL забороняє асиметричність і обмеження кардинальності на транзитивних властивостях."@uk ;
     dct:source "Guide to the Software Engineering Body of Knowledge, Version 4.0 / ed. H. Washizaki. IEEE Computer Society, 2024."@en ;
-    owl:versionInfo "1.1 (2026-09-24)" .
+    owl:versionInfo "1.2 (2026-09-25)" .
 
 #################################################################
-# 1. Класи верхнього рівня — системна онтологія Ос = (Oо, Oп, Oз)
+# 1. Класи — системна онтологія Ос = (Oо, Oп, Oз) і лекційні таксономії
+#    swe:lectureRef — слайд лекції, з якого взято клас; swe:modelRef — джерело класу,
+#    якого в лекціях немає; swe:displayOrder і swe:treeParent — порядок і основне
+#    місце класу в дереві візуалізації (на логіку OWL не впливають)
 #################################################################
+
+swe:lectureRef a owl:AnnotationProperty ; rdfs:label "джерело класу в лекціях"@uk .
+swe:modelRef a owl:AnnotationProperty ; rdfs:label "джерело класу поза лекціями"@uk .
+swe:displayOrder a owl:AnnotationProperty ; rdfs:label "порядок серед класів одного рівня"@uk .
+swe:treeParent a owl:AnnotationProperty ; rdfs:label "основний батьківський клас у дереві"@uk .
+swe:lpmConcept a owl:AnnotationProperty ; rdfs:label "поняття шару ЛПМ, що відповідає класу"@uk .
+
+swe:SystemOntologyComponent a owl:Class ;
+    rdfs:label "Складова системної онтології Ос"@uk ;
+    swe:lectureRef "Л2 сл. 15; Л3 сл. 5" ; swe:displayOrder 1 .
+swe:ProcessOntology a owl:Class ; rdfs:subClassOf swe:SystemOntologyComponent ;
+    rdfs:label "Онтологія процесів Oп"@uk ;
+    rdfs:comment "Ієрархічна структура процесів, підпроцесів, дій і операцій (лекція 2, сл. 15). Її елементи — клас swe:Process."@uk ;
+    swe:lectureRef "Л2 сл. 15" ; swe:displayOrder 1 .
+swe:ObjectOntology a owl:Class ; rdfs:subClassOf swe:SystemOntologyComponent ;
+    rdfs:label "Онтологія об'єктів Oо"@uk ;
+    rdfs:comment "Ієрархічна структура класів, підкласів та елементів класів понять, на які посилаються Oп і Oз. Її елементи — клас swe:ObjectIPZ."@uk ;
+    swe:lectureRef "Л2 сл. 15" ; swe:displayOrder 2 .
+swe:TaskOntology a owl:Class ; rdfs:subClassOf swe:SystemOntologyComponent ;
+    rdfs:label "Онтологія задач Oз"@uk ;
+    rdfs:comment "Ієрархічна структура задач, підзадач, процедур і операторів. Її елементи — клас swe:TaskIPZ."@uk ;
+    swe:lectureRef "Л2 сл. 15" ; swe:displayOrder 3 .
+[] a owl:AllDisjointClasses ; owl:members ( swe:ProcessOntology swe:ObjectOntology swe:TaskOntology ) .
 
 swe:Concept a owl:Class ;
     rdfs:label "Концепт ПрО ІПЗ"@uk ;
-    rdfs:comment "Елемент множини X онтології O = (X, R, F, A) (лекція 2, сл. 14)."@uk .
+    rdfs:comment "Елемент множини X онтології O = (X, R, F, A) (лекція 2, сл. 14)."@uk ;
+    swe:lectureRef "Л2 сл. 14" ; swe:displayOrder 2 .
 
-swe:PrimaryConcept a owl:Class ; rdfs:subClassOf swe:Concept ;
-    rdfs:label "Первинне (аксіоматичне) поняття"@uk ;
-    rdfs:comment "Поняття суміжних ПрО — аксіоматичний шар ЛПМ (лекція 2, сл. 21–22)."@uk .
-swe:BasicConcept a owl:Class ; rdfs:subClassOf swe:Concept ;
-    rdfs:label "Базове поняття ПрО ІПЗ"@uk ;
-    rdfs:comment "Утворене з первинних через УЗ — базовий шар ЛПМ."@uk .
-swe:DerivedConcept a owl:Class ; rdfs:subClassOf swe:Concept ;
-    rdfs:label "Похідне поняття"@uk ;
-    rdfs:comment "Утворене з базових/первинних через УЗ — шар похідних понять ЛПМ."@uk .
-
-swe:KnowledgeArea a owl:Class ; rdfs:subClassOf swe:DerivedConcept ;
-    rdfs:label "Область знань SWEBOK (Knowledge Area)"@uk ;
-    rdfs:comment "Ідентифікована область інженерії ПЗ, що визначається вимогами до знань і описується у термінах складових процесів, практик, входів, виходів, інструментів і технік (SWEBOK v4.0, с. xxv)."@uk .
-
-swe:SystemOntologyComponent a owl:Class ;
-    rdfs:label "Складова системної онтології"@uk .
-swe:ProcessOntology a owl:Class ; rdfs:subClassOf swe:SystemOntologyComponent ;
-    rdfs:label "Онтологія процесів Oп"@uk ;
-    rdfs:comment "Ієрархічна структура процесів, підпроцесів, дій і операцій (лекція 2, сл. 15)."@uk .
-swe:ObjectOntology a owl:Class ; rdfs:subClassOf swe:SystemOntologyComponent ;
-    rdfs:label "Онтологія об'єктів Oо"@uk ;
-    rdfs:comment "Ієрархічна структура класів, підкласів та елементів класів понять, на які посилаються Oп і Oз."@uk .
-swe:TaskOntology a owl:Class ; rdfs:subClassOf swe:SystemOntologyComponent ;
-    rdfs:label "Онтологія задач Oз"@uk ;
-    rdfs:comment "Ієрархічна структура задач, підзадач, процедур і операторів."@uk .
-[] a owl:AllDisjointClasses ; owl:members ( swe:ProcessOntology swe:ObjectOntology swe:TaskOntology ) .
-
-# Класи-члени складових Ос (аксіома A1: KA належить рівно одній складовій)
-swe:ProcessKA a owl:Class ; rdfs:subClassOf swe:KnowledgeArea ;
-    rdfs:label "Процесна область знань (член Oп)"@uk ;
-    owl:equivalentClass [ a owl:Class ; owl:intersectionOf ( swe:KnowledgeArea
-        [ a owl:Restriction ; owl:onProperty swe:belongsTo ; owl:hasValue swe:ProcessOntologyOfIPZ ] ) ] .
-swe:ObjectKA a owl:Class ; rdfs:subClassOf swe:KnowledgeArea ;
-    rdfs:label "Об'єктна область знань (член Oо)"@uk ;
-    owl:equivalentClass [ a owl:Class ; owl:intersectionOf ( swe:KnowledgeArea
-        [ a owl:Restriction ; owl:onProperty swe:belongsTo ; owl:hasValue swe:ObjectOntologyOfIPZ ] ) ] .
-swe:TaskKA a owl:Class ; rdfs:subClassOf swe:KnowledgeArea ;
-    rdfs:label "Задачна область знань (член Oз)"@uk ;
-    owl:equivalentClass [ a owl:Class ; owl:intersectionOf ( swe:KnowledgeArea
-        [ a owl:Restriction ; owl:onProperty swe:belongsTo ; owl:hasValue swe:TaskOntologyOfIPZ ] ) ] .
-[] a owl:AllDisjointClasses ; owl:members ( swe:ProcessKA swe:ObjectKA swe:TaskKA ) .
-
-# Ієрархія онтології процесів (лекція 2, сл. 15) та класи процесів (лекція 3, сл. 6)
+# --- Oп: процеси. Елемент Oп — будь-який процес (аксіома A1, поширена на всі поняття) ---
 swe:Process a owl:Class ; rdfs:subClassOf swe:Concept ;
-    rdfs:label "Процес"@uk ;
-    rdfs:comment "Фіксовані в часі зміни станів виокремленої сукупності сутностей (лекція 3, сл. 6, 8)."@uk .
-swe:ActivityProcess a owl:Class ; rdfs:subClassOf swe:Process ; rdfs:label "Процес діяльності"@uk .
-swe:PurposefulProcess a owl:Class ; rdfs:subClassOf swe:ActivityProcess ; rdfs:label "Доцільний процес діяльності"@uk .
-swe:ProductionProcess a owl:Class ; rdfs:subClassOf swe:PurposefulProcess ; rdfs:label "Продуктовий виробничий процес"@uk .
-swe:ProjectProcess a owl:Class ; rdfs:subClassOf swe:ProductionProcess ; rdfs:label "Процес-проєкт"@uk .
-swe:SoftwareEngineeringProcess a owl:Class ; rdfs:subClassOf swe:ProductionProcess ;
+    rdfs:label "Процес (елемент Oп)"@uk ;
+    rdfs:comment "Фіксовані в часі зміни станів виокремленої сукупності сутностей (лекція 3, сл. 6, 8)."@uk ;
+    owl:equivalentClass [ a owl:Class ; owl:intersectionOf ( swe:Concept
+        [ a owl:Restriction ; owl:onProperty swe:belongsTo ; owl:hasValue swe:ProcessOntologyOfIPZ ] ) ] ;
+    swe:lpmConcept swe:P_Pr ; swe:lectureRef "Л3 сл. 6, 8" ; swe:displayOrder 1 .
+# Ієрархія класів процесів (лекція 3, сл. 6): кожен наступний — різновид попереднього
+swe:ActivityProcess a owl:Class ; rdfs:subClassOf swe:Process ; rdfs:label "Процес діяльності"@uk ;
+    swe:lectureRef "Л3 сл. 6" ; swe:displayOrder 1 .
+swe:PurposefulProcess a owl:Class ; rdfs:subClassOf swe:ActivityProcess ; rdfs:label "Доцільний процес діяльності"@uk ;
+    swe:lectureRef "Л3 сл. 6" .
+swe:ProductionProcess a owl:Class ; rdfs:subClassOf swe:PurposefulProcess ; rdfs:label "Продуктовий виробничий процес"@uk ;
+    swe:lectureRef "Л3 сл. 6" .
+swe:ProjectProcess a owl:Class ; rdfs:subClassOf swe:ProductionProcess ; rdfs:label "Процес-проєкт"@uk ;
+    swe:lpmConcept swe:B_Pj ; swe:lectureRef "Л3 сл. 6" .
+swe:SoftwareEngineeringProcess a owl:Class ; rdfs:subClassOf swe:ProjectProcess ;
     rdfs:label "Процес програмної інженерії (процес ПІ)"@uk ;
-    rdfs:comment "Продуктовий процес, об'єктом діяльності якого є програмні продукти (лекція 3, сл. 6, 10). Операційні процеси мають сервісний, а не проєктний характер (SWEBOK v4.0, с. 6-6), тому клас підпорядковано ProductionProcess."@uk .
-swe:SubProcess a owl:Class ; rdfs:subClassOf swe:Process ; rdfs:label "Підпроцес"@uk .
-swe:Action a owl:Class ; rdfs:subClassOf swe:Process ; rdfs:label "Дія"@uk .
-swe:Operation a owl:Class ; rdfs:subClassOf swe:Process ; rdfs:label "Операція"@uk .
+    rdfs:comment "Процес-проєкт, об'єктом діяльності якого є програмні продукти (лекція 3, сл. 6, 10); він же — корінь «Процеси створення ПЗ» онтології процесів ПрО ІПЗ (лекція 2, сл. 17). KA 6 (нова у v4.0) не має відповідника серед шести лекційних класів і є лише екземпляром swe:ProcessKA."@uk ;
+    swe:lpmConcept swe:B_PI ; swe:lectureRef "Л3 сл. 6, 10; Л2 сл. 17" .
+swe:SubProcess a owl:Class ; rdfs:subClassOf swe:ProcessPart ; rdfs:label "Підпроцес"@uk ;
+    rdfs:subClassOf [ a owl:Restriction ; owl:onProperty swe:isPartOf ; owl:someValuesFrom swe:Process ] ;
+    swe:lectureRef "Л2 сл. 15" ; swe:displayOrder 1 .
+swe:Action a owl:Class ; rdfs:subClassOf swe:ProcessPart ; rdfs:label "Дія"@uk ;
+    rdfs:subClassOf [ a owl:Restriction ; owl:onProperty swe:isPartOf ; owl:someValuesFrom swe:Process ] ;
+    swe:lectureRef "Л2 сл. 15" ; swe:displayOrder 2 .
+swe:Operation a owl:Class ; rdfs:subClassOf swe:ProcessPart ; rdfs:label "Операція"@uk ;
+    rdfs:subClassOf [ a owl:Restriction ; owl:onProperty swe:isPartOf ; owl:someValuesFrom swe:Action ] ;
+    swe:lectureRef "Л2 сл. 15" ; swe:displayOrder 3 .
 swe:FundamentalAction a owl:Class ; rdfs:subClassOf swe:Action ;
     rdfs:label "Наскрізна базова дія"@uk ;
-    rdfs:comment "Дія з розділу Fundamentals, яка використовується у кількох підпроцесах (аксіома A6)."@uk .
-swe:PracticalConsideration a owl:Class ; rdfs:subClassOf swe:Concept ;
-    rdfs:label "Практичне міркування (модифікатор процесу)"@uk .
-swe:Tool a owl:Class ; rdfs:subClassOf swe:Concept ;
-    rdfs:label "Інструментальний засіб (механізм процесу, член Oо)"@uk .
+    rdfs:comment "Дія з розділу Fundamentals, яка використовується у кількох підпроцесах (аксіома A6)."@uk ;
+    swe:modelRef "SWEBOK v4.0, гл. 6 §1.3–1.6" .
+
+# --- Oо: об'єкти ---
+swe:ObjectIPZ a owl:Class ; rdfs:subClassOf swe:Concept ;
+    rdfs:label "Об'єкт ІПЗ (елемент Oо)"@uk ;
+    rdfs:comment "Корінь онтології об'єктів ПрО ІПЗ (лекція 2, сл. 18)."@uk ;
+    owl:equivalentClass [ a owl:Class ; owl:intersectionOf ( swe:Concept
+        [ a owl:Restriction ; owl:onProperty swe:belongsTo ; owl:hasValue swe:ObjectOntologyOfIPZ ] ) ] ;
+    swe:lectureRef "Л2 сл. 18" ; swe:displayOrder 2 .
+swe:Tool a owl:Class ; rdfs:subClassOf swe:ObjectIPZ ;
+    rdfs:label "Інструментальні засоби ІПЗ"@uk ;
+    swe:lpmConcept swe:B_T ; swe:lectureRef "Л2 сл. 18, 32" ; swe:displayOrder 1 .
+swe:System a owl:Class ; rdfs:subClassOf swe:Concept ;
+    rdfs:label "Система (ієрархія систем штучного походження)"@uk ;
+    rdfs:comment "Загальна категорія ІПЗ (лекція 2, сл. 12). Підкласи впорядковано за вкладеністю (сл. 4): кожен рівень є складовою попереднього."@uk ;
+    swe:lpmConcept swe:P_S ; swe:lectureRef "Л2 сл. 4, 12; Л1 сл. 11" ; swe:displayOrder 4 .
+
+# --- Oз: задачі ---
+swe:TaskIPZ a owl:Class ; rdfs:subClassOf swe:Concept ;
+    rdfs:label "Задача ІПЗ (елемент Oз)"@uk ;
+    rdfs:comment "Корінь онтології задач ПрО ІПЗ — «Задачі створення ПЗ» (лекція 2, сл. 16)."@uk ;
+    owl:equivalentClass [ a owl:Class ; owl:intersectionOf ( swe:Concept
+        [ a owl:Restriction ; owl:onProperty swe:belongsTo ; owl:hasValue swe:TaskOntologyOfIPZ ] ) ] ;
+    swe:lectureRef "Л2 сл. 16" ; swe:displayOrder 3 .
+
+# --- Шари ЛПМ (лекція 2, сл. 21–22) ---
+swe:LpmLayerConcept a owl:Class ; rdfs:subClassOf swe:Concept ;
+    rdfs:label "Поняття шару ЛПМ"@uk ;
+    swe:lectureRef "Л2 сл. 21–22" ; swe:displayOrder 5 .
+swe:PrimaryConcept a owl:Class ; rdfs:subClassOf swe:LpmLayerConcept ;
+    rdfs:label "Первинне (аксіоматичне) поняття"@uk ;
+    rdfs:comment "Поняття суміжних ПрО — аксіоматичний шар ЛПМ (лекція 2, сл. 21–22)."@uk ;
+    swe:lectureRef "Л2 сл. 21–22" ; swe:displayOrder 1 .
+swe:BasicConcept a owl:Class ; rdfs:subClassOf swe:LpmLayerConcept ;
+    rdfs:label "Базове поняття ПрО ІПЗ"@uk ;
+    rdfs:comment "Утворене з первинних через УЗ — базовий шар ЛПМ."@uk ;
+    swe:lectureRef "Л2 сл. 21–22" ; swe:displayOrder 2 .
+swe:DerivedConcept a owl:Class ; rdfs:subClassOf swe:LpmLayerConcept ;
+    rdfs:label "Похідне поняття"@uk ;
+    rdfs:comment "Утворене з базових/первинних через УЗ — шар похідних понять ЛПМ."@uk ;
+    swe:lectureRef "Л2 сл. 21–22" ; swe:displayOrder 3 .
+swe:KnowledgeArea a owl:Class ; rdfs:subClassOf swe:DerivedConcept ;
+    rdfs:label "Область знань SWEBOK (Knowledge Area)"@uk ;
+    rdfs:comment "Ідентифікована область інженерії ПЗ, що визначається вимогами до знань і описується у термінах складових процесів, практик, входів, виходів, інструментів і технік (SWEBOK v4.0, с. xxv)."@uk ;
+    swe:lectureRef "Л3 сл. 24" ; swe:displayOrder 1 .
 swe:SystemicUnion a owl:Class ; rdfs:subClassOf swe:DerivedConcept ;
     rdfs:label "Системологічне поєднання"@uk ;
-    rdfs:comment "Нове поняття С, яке не є простою сумою складових понять (лекція 2, сл. 27, УЗ типу s)."@uk .
+    rdfs:comment "Нове поняття С, яке не є простою сумою складових понять (лекція 2, сл. 27, УЗ типу s)."@uk ;
+    swe:lectureRef "Л2 сл. 27" ; swe:displayOrder 2 .
 
-# Концепти онтології процесу (лекція 3, сл. 8–9) — властивості даних паспорта процесу
+# Класи KA за складовими Ос (аксіома A1: KA належить рівно одній складовій). Основне місце в дереві —
+# під елементом відповідної складової; під KnowledgeArea — посилання
+swe:ProcessKA a owl:Class ; rdfs:subClassOf swe:KnowledgeArea , swe:SoftwareEngineeringProcess ;
+    rdfs:label "Процесна область знань (член Oп)"@uk ;
+    owl:equivalentClass [ a owl:Class ; owl:intersectionOf ( swe:KnowledgeArea
+        [ a owl:Restriction ; owl:onProperty swe:belongsTo ; owl:hasValue swe:ProcessOntologyOfIPZ ] ) ] ;
+    swe:modelRef "розподіл KA за Ос, п. 3.2" ; swe:treeParent swe:SoftwareEngineeringProcess ; swe:displayOrder 7 .
+swe:ObjectKA a owl:Class ; rdfs:subClassOf swe:KnowledgeArea , swe:ObjectIPZ ;
+    rdfs:label "Об'єктна область знань (член Oо)"@uk ;
+    owl:equivalentClass [ a owl:Class ; owl:intersectionOf ( swe:KnowledgeArea
+        [ a owl:Restriction ; owl:onProperty swe:belongsTo ; owl:hasValue swe:ObjectOntologyOfIPZ ] ) ] ;
+    swe:modelRef "розподіл KA за Ос, п. 3.2" ; swe:treeParent swe:ObjectIPZ ; swe:displayOrder 6 .
+swe:TaskKA a owl:Class ; rdfs:subClassOf swe:KnowledgeArea , swe:TaskIPZ ;
+    rdfs:label "Задачна область знань (член Oз)"@uk ;
+    owl:equivalentClass [ a owl:Class ; owl:intersectionOf ( swe:KnowledgeArea
+        [ a owl:Restriction ; owl:onProperty swe:belongsTo ; owl:hasValue swe:TaskOntologyOfIPZ ] ) ] ;
+    swe:modelRef "розподіл KA за Ос, п. 3.2" ; swe:treeParent swe:TaskIPZ ; swe:displayOrder 8 .
+[] a owl:AllDisjointClasses ; owl:members ( swe:ProcessKA swe:ObjectKA swe:TaskKA ) .
+
+swe:PracticalConsideration a owl:Class ; rdfs:subClassOf swe:Concept ;
+    rdfs:label "Практичне міркування (модифікатор процесу)"@uk ;
+    swe:modelRef "SWEBOK v4.0, гл. 6 §5" ; swe:displayOrder 6 .
+
+# Концепти онтології процесу (лекція 3, сл. 8–9) — анотаційні властивості паспорта процесу
 swe:hasInput a owl:AnnotationProperty ; rdfs:label "входи процесу"@uk .
 swe:hasOutput a owl:AnnotationProperty ; rdfs:label "виходи процесу"@uk .
 swe:hasMechanism a owl:AnnotationProperty ; rdfs:label "механізми процесу"@uk .
@@ -101,6 +166,9 @@ swe:hasTechnology a owl:AnnotationProperty ; rdfs:label "технологія п
 swe:hasGoal a owl:AnnotationProperty ; rdfs:label "цілі процесу"@uk .
 swe:hasMetric a owl:AnnotationProperty ; rdfs:label "метрики процесу"@uk .
 swe:hasIndicator a owl:AnnotationProperty ; rdfs:label "показники процесу"@uk .
+swe:hasEffectiveness a owl:AnnotationProperty ; rdfs:label "результативність процесу"@uk .
+swe:hasEfficiency a owl:AnnotationProperty ; rdfs:label "ефективність процесу"@uk .
+swe:hasFunction a owl:AnnotationProperty ; rdfs:label "функція процесу"@uk .
 swe:notation a owl:AnnotationProperty ; rdfs:label "позначення в тексті роботи"@uk .
 
 #################################################################
@@ -273,15 +341,15 @@ swe:B_Rq a swe:BasicConcept , owl:NamedIndividual ;
 
 swe:B_PI a swe:BasicConcept , owl:NamedIndividual ;
     rdfs:label "Процес інженерії ПЗ (процес ПІ)"@uk ;
-    rdfs:comment "Доцільний продуктовий процес діяльності, об'єктом якого є програмний продукт"@uk ;
-    swe:lpmFormula "(х) Pr; (о) H, G, SP"@uk ;
+    rdfs:comment "Процес-проєкт, об'єктом діяльності якого є програмний продукт"@uk ;
+    swe:lpmFormula "(х) Pj; (о) H, SP"@uk ;
     rdfs:seeAlso "Л3 сл. 6, 10; KA 10 §1.2 (с. 10-3)"@uk .
 
 swe:B_Pj a swe:BasicConcept , owl:NamedIndividual ;
     rdfs:label "Проєкт"@uk ;
-    rdfs:comment "Сукупність дій з визначеними термінами для створення продукту відповідно до ресурсів і вимог"@uk ;
-    swe:lpmFormula "(х) PI"@uk ;
-    rdfs:seeAlso "Л3 сл. 11; ISO/IEC/IEEE 12207"@uk .
+    rdfs:comment "Унікальний продуктовий процес, обмежений у часі й ресурсах, спрямований на створення продукту відповідно до вимог"@uk ;
+    swe:lpmFormula "(х) Pr; (о) G, $"@uk ;
+    rdfs:seeAlso "Л3 сл. 6, 11; ISO/IEC/IEEE 12207"@uk .
 
 swe:B_LC a swe:BasicConcept , owl:NamedIndividual ;
     rdfs:label "Життєвий цикл ПЗ"@uk ;
@@ -362,7 +430,7 @@ swe:lpmFormula a owl:AnnotationProperty ; rdfs:label "формула утвор�
 # 5. Області знань SWEBOK v4.0 — 18 похідних концептів
 #################################################################
 
-swe:KA1 a swe:ProcessKA , swe:SoftwareEngineeringProcess , owl:NamedIndividual ;
+swe:KA1 a swe:ProcessKA , swe:PreDesignProcess , owl:NamedIndividual ;
     rdfs:label "Вимоги до ПЗ"@uk , "Software Requirements"@en ;
     swe:kaNumber 1 ;
     swe:belongsTo swe:ProcessOntologyOfIPZ ;
@@ -370,7 +438,7 @@ swe:KA1 a swe:ProcessKA , swe:SoftwareEngineeringProcess , owl:NamedIndividual ;
     swe:swebokPage "1-1" ;
     rdfs:seeAlso "SWEBOK Guide v4.0, глава 1, с. 1-1"@uk .
 
-swe:KA2 a swe:ProcessKA , swe:SoftwareEngineeringProcess , owl:NamedIndividual ;
+swe:KA2 a swe:ProcessKA , swe:DesignProcess , owl:NamedIndividual ;
     rdfs:label "Архітектура ПЗ"@uk , "Software Architecture"@en ;
     swe:kaNumber 2 ;
     swe:belongsTo swe:ProcessOntologyOfIPZ ;
@@ -378,7 +446,7 @@ swe:KA2 a swe:ProcessKA , swe:SoftwareEngineeringProcess , owl:NamedIndividual ;
     swe:swebokPage "2-1" ;
     rdfs:seeAlso "SWEBOK Guide v4.0, глава 2, с. 2-1"@uk .
 
-swe:KA3 a swe:ProcessKA , swe:SoftwareEngineeringProcess , owl:NamedIndividual ;
+swe:KA3 a swe:ProcessKA , swe:DesignProcess , owl:NamedIndividual ;
     rdfs:label "Проєктування ПЗ"@uk , "Software Design"@en ;
     swe:kaNumber 3 ;
     swe:belongsTo swe:ProcessOntologyOfIPZ ;
@@ -386,7 +454,7 @@ swe:KA3 a swe:ProcessKA , swe:SoftwareEngineeringProcess , owl:NamedIndividual ;
     swe:swebokPage "3-1" ;
     rdfs:seeAlso "SWEBOK Guide v4.0, глава 3, с. 3-1"@uk .
 
-swe:KA4 a swe:ProcessKA , swe:SoftwareEngineeringProcess , owl:NamedIndividual ;
+swe:KA4 a swe:ProcessKA , swe:ConstructionProcess , owl:NamedIndividual ;
     rdfs:label "Конструювання ПЗ"@uk , "Software Construction"@en ;
     swe:kaNumber 4 ;
     swe:belongsTo swe:ProcessOntologyOfIPZ ;
@@ -394,7 +462,7 @@ swe:KA4 a swe:ProcessKA , swe:SoftwareEngineeringProcess , owl:NamedIndividual ;
     swe:swebokPage "4-1" ;
     rdfs:seeAlso "SWEBOK Guide v4.0, глава 4, с. 4-1"@uk .
 
-swe:KA5 a swe:ProcessKA , swe:SoftwareEngineeringProcess , owl:NamedIndividual ;
+swe:KA5 a swe:ProcessKA , swe:TestingQAProcess , owl:NamedIndividual ;
     rdfs:label "Тестування ПЗ"@uk , "Software Testing"@en ;
     swe:kaNumber 5 ;
     swe:belongsTo swe:ProcessOntologyOfIPZ ;
@@ -402,7 +470,7 @@ swe:KA5 a swe:ProcessKA , swe:SoftwareEngineeringProcess , owl:NamedIndividual ;
     swe:swebokPage "5-1" ;
     rdfs:seeAlso "SWEBOK Guide v4.0, глава 5, с. 5-1"@uk .
 
-swe:KA6 a swe:ProcessKA , swe:SoftwareEngineeringProcess , owl:NamedIndividual ;
+swe:KA6 a swe:ProcessKA , owl:NamedIndividual ;
     rdfs:label "Операції інженерії ПЗ"@uk , "Software Engineering Operations"@en ;
     swe:kaNumber 6 ;
     swe:belongsTo swe:ProcessOntologyOfIPZ ;
@@ -410,7 +478,7 @@ swe:KA6 a swe:ProcessKA , swe:SoftwareEngineeringProcess , owl:NamedIndividual ;
     swe:swebokPage "6-1" ;
     rdfs:seeAlso "SWEBOK Guide v4.0, глава 6, с. 6-1"@uk .
 
-swe:KA7 a swe:ProcessKA , swe:SoftwareEngineeringProcess , owl:NamedIndividual ;
+swe:KA7 a swe:ProcessKA , swe:MaintenanceProcess , owl:NamedIndividual ;
     rdfs:label "Супроводження ПЗ"@uk , "Software Maintenance"@en ;
     swe:kaNumber 7 ;
     swe:belongsTo swe:ProcessOntologyOfIPZ ;
@@ -418,7 +486,7 @@ swe:KA7 a swe:ProcessKA , swe:SoftwareEngineeringProcess , owl:NamedIndividual ;
     swe:swebokPage "7-1" ;
     rdfs:seeAlso "SWEBOK Guide v4.0, глава 7, с. 7-1"@uk .
 
-swe:KA8 a swe:ProcessKA , swe:SoftwareEngineeringProcess , owl:NamedIndividual ;
+swe:KA8 a swe:ProcessKA , swe:LifeCycleManagementProcess , owl:NamedIndividual ;
     rdfs:label "Управління конфігурацією ПЗ"@uk , "Software Configuration Management"@en ;
     swe:kaNumber 8 ;
     swe:belongsTo swe:ProcessOntologyOfIPZ ;
@@ -426,7 +494,7 @@ swe:KA8 a swe:ProcessKA , swe:SoftwareEngineeringProcess , owl:NamedIndividual ;
     swe:swebokPage "8-1" ;
     rdfs:seeAlso "SWEBOK Guide v4.0, глава 8, с. 8-1"@uk .
 
-swe:KA9 a swe:ProcessKA , swe:SoftwareEngineeringProcess , owl:NamedIndividual ;
+swe:KA9 a swe:ProcessKA , swe:LifeCycleManagementProcess , owl:NamedIndividual ;
     rdfs:label "Управління інженерією ПЗ"@uk , "Software Engineering Management"@en ;
     swe:kaNumber 9 ;
     swe:belongsTo swe:ProcessOntologyOfIPZ ;
@@ -434,7 +502,7 @@ swe:KA9 a swe:ProcessKA , swe:SoftwareEngineeringProcess , owl:NamedIndividual ;
     swe:swebokPage "9-1" ;
     rdfs:seeAlso "SWEBOK Guide v4.0, глава 9, с. 9-1"@uk .
 
-swe:KA10 a swe:ProcessKA , swe:SoftwareEngineeringProcess , owl:NamedIndividual ;
+swe:KA10 a swe:ProcessKA , swe:LifeCycleManagementProcess , owl:NamedIndividual ;
     rdfs:label "Процес інженерії ПЗ"@uk , "Software Engineering Process"@en ;
     swe:kaNumber 10 ;
     swe:belongsTo swe:ProcessOntologyOfIPZ ;
@@ -508,6 +576,117 @@ swe:KA18 a swe:ObjectKA , owl:NamedIndividual ;
 
 
 #################################################################
+# 5а. Лекційні таксономії (data.LECTURE_CLASSES)
+#################################################################
+
+swe:PreDesignProcess a owl:Class ; rdfs:subClassOf swe:SoftwareEngineeringProcess ;
+    rdfs:label "Процеси передпроєктної підготовки"@uk ;
+    swe:lectureRef "Л2 сл. 17" ; swe:displayOrder 1 .
+swe:DesignProcess a owl:Class ; rdfs:subClassOf swe:SoftwareEngineeringProcess ;
+    rdfs:label "Процеси проєктування ПЗ"@uk ;
+    swe:lectureRef "Л2 сл. 17" ; swe:displayOrder 2 .
+swe:ConstructionProcess a owl:Class ; rdfs:subClassOf swe:SoftwareEngineeringProcess ;
+    rdfs:label "Процеси конструювання та реалізації ПЗ"@uk ;
+    swe:lectureRef "Л2 сл. 17" ; swe:displayOrder 3 .
+swe:TestingQAProcess a owl:Class ; rdfs:subClassOf swe:SoftwareEngineeringProcess ;
+    rdfs:label "Процеси тестування і забезпечення якості"@uk ;
+    rdfs:comment "KA 12 сюди не віднесено: її кореневий концепт — якість як властивість, KA 12 належить до Oо (п. 3.2.3)."@uk ;
+    swe:lectureRef "Л2 сл. 17" ; swe:displayOrder 4 .
+swe:MaintenanceProcess a owl:Class ; rdfs:subClassOf swe:SoftwareEngineeringProcess ;
+    rdfs:label "Процеси супроводу ПЗ"@uk ;
+    swe:lectureRef "Л2 сл. 17" ; swe:displayOrder 5 .
+swe:LifeCycleManagementProcess a owl:Class ; rdfs:subClassOf swe:SoftwareEngineeringProcess ;
+    rdfs:label "Процеси управління життєвим циклом"@uk ;
+    swe:lectureRef "Л2 сл. 17" ; swe:displayOrder 6 .
+swe:ProcessPart a owl:Class ; rdfs:subClassOf swe:Process ;
+    rdfs:label "Складова процесу (рівні декомпозиції Oп)"@uk ;
+    rdfs:comment "Ієрархія Oп «процес → підпроцес → дія → операція»: кожен рівень є складовою (УЗ «а») попереднього і сам є процесом."@uk ;
+    swe:lectureRef "Л2 сл. 15; Л3 сл. 5" ; swe:displayOrder 2 .
+swe:Technology a owl:Class ; rdfs:subClassOf swe:ObjectIPZ ;
+    rdfs:label "Технології створення ПЗ"@uk ;
+    swe:lectureRef "Л2 сл. 18, 35" ; swe:displayOrder 2 .
+swe:Software a owl:Class ; rdfs:subClassOf swe:ObjectIPZ , swe:System ;
+    rdfs:label "Програмне забезпечення"@uk ;
+    rdfs:subClassOf [ a owl:Restriction ; owl:onProperty swe:isPartOf ; owl:someValuesFrom swe:InformationSystem ] ;
+    swe:lpmConcept swe:B_SW ;
+    swe:treeParent swe:ObjectIPZ ;
+    swe:lectureRef "Л2 сл. 18, 31; Л1 сл. 17" ; swe:displayOrder 3 .
+swe:Professional a owl:Class ; rdfs:subClassOf swe:ObjectIPZ ;
+    rdfs:label "Професійні фахівці"@uk ;
+    swe:lpmConcept swe:B_Eng ;
+    swe:lectureRef "Л2 сл. 18, 33" ; swe:displayOrder 4 .
+swe:Infrastructure a owl:Class ; rdfs:subClassOf swe:ObjectIPZ ;
+    rdfs:label "Інфраструктура ІПЗ"@uk ;
+    swe:lectureRef "Л2 сл. 18, 34" ; swe:displayOrder 5 .
+swe:Program a owl:Class ; rdfs:subClassOf swe:Software ;
+    rdfs:label "Програма (програмний код)"@uk ;
+    swe:lectureRef "Л1 сл. 14–15" ; swe:displayOrder 1 .
+swe:SoftwareModule a owl:Class ; rdfs:subClassOf swe:Software ;
+    rdfs:label "Програмний модуль"@uk ;
+    rdfs:subClassOf [ a owl:Restriction ; owl:onProperty swe:isPartOf ; owl:someValuesFrom swe:Program ] ;
+    swe:lectureRef "Л1 сл. 14–15" ; swe:displayOrder 2 .
+swe:SoftwareComponent a owl:Class ; rdfs:subClassOf swe:Software ;
+    rdfs:label "Програмний компонент"@uk ;
+    rdfs:subClassOf [ a owl:Restriction ; owl:onProperty swe:isPartOf ; owl:someValuesFrom swe:Software ] ;
+    swe:lectureRef "Л1 сл. 14, 16; Л2 сл. 4, 12" ; swe:displayOrder 3 .
+swe:SoftwareProduct a owl:Class ; rdfs:subClassOf swe:Software ;
+    rdfs:label "Програмний продукт"@uk ;
+    swe:lpmConcept swe:B_SP ;
+    swe:lectureRef "Л1 сл. 14, 16" ; swe:displayOrder 4 .
+swe:SoftwareSystem a owl:Class ; rdfs:subClassOf swe:Software ;
+    rdfs:label "Програмна система"@uk ;
+    swe:lectureRef "Л1 сл. 14, 17" ; swe:displayOrder 5 .
+swe:Anthroposystem a owl:Class ; rdfs:subClassOf swe:System ;
+    rdfs:label "Антропосистема"@uk ;
+    swe:lectureRef "Л2 сл. 4, 12" ; swe:displayOrder 1 .
+swe:SubjectArea a owl:Class ; rdfs:subClassOf swe:System ;
+    rdfs:label "Предметна область"@uk ;
+    rdfs:subClassOf [ a owl:Restriction ; owl:onProperty swe:isPartOf ; owl:someValuesFrom swe:Anthroposystem ] ;
+    swe:lectureRef "Л2 сл. 4–5" ; swe:displayOrder 2 .
+swe:AppliedSystem a owl:Class ; rdfs:subClassOf swe:System ;
+    rdfs:label "Прикладна система"@uk ;
+    rdfs:subClassOf [ a owl:Restriction ; owl:onProperty swe:isPartOf ; owl:someValuesFrom swe:SubjectArea ] ;
+    swe:lectureRef "Л2 сл. 4, 12" ; swe:displayOrder 3 .
+swe:InformationSystem a owl:Class ; rdfs:subClassOf swe:System ;
+    rdfs:label "Інформаційна система"@uk ;
+    rdfs:subClassOf [ a owl:Restriction ; owl:onProperty swe:isPartOf ; owl:someValuesFrom swe:AppliedSystem ] ;
+    swe:lectureRef "Л2 сл. 4, 12" ; swe:displayOrder 4 .
+swe:RequirementsTask a owl:Class ; rdfs:subClassOf swe:TaskIPZ ;
+    rdfs:label "Задачі визначення вимог до ПЗ"@uk ;
+    swe:lectureRef "Л2 сл. 16" ; swe:displayOrder 1 .
+swe:DesignTask a owl:Class ; rdfs:subClassOf swe:TaskIPZ ;
+    rdfs:label "Задачі проєктування ПЗ"@uk ;
+    swe:lectureRef "Л2 сл. 16" ; swe:displayOrder 2 .
+swe:ImplementationTask a owl:Class ; rdfs:subClassOf swe:TaskIPZ ;
+    rdfs:label "Задачі реалізації ПЗ"@uk ;
+    swe:lectureRef "Л2 сл. 16" ; swe:displayOrder 3 .
+swe:TestingQATask a owl:Class ; rdfs:subClassOf swe:TaskIPZ ;
+    rdfs:label "Задачі тестування і забезпечення якості"@uk ;
+    swe:lectureRef "Л2 сл. 16" ; swe:displayOrder 4 .
+swe:MaintenanceTask a owl:Class ; rdfs:subClassOf swe:TaskIPZ ;
+    rdfs:label "Задачі супроводу ПЗ"@uk ;
+    swe:lectureRef "Л2 сл. 16" ; swe:displayOrder 5 .
+swe:LifeCycleManagementTask a owl:Class ; rdfs:subClassOf swe:TaskIPZ ;
+    rdfs:label "Задачі управління життєвим циклом ПЗ"@uk ;
+    swe:lectureRef "Л2 сл. 16" ; swe:displayOrder 6 .
+swe:TaskPart a owl:Class ; rdfs:subClassOf swe:TaskIPZ ;
+    rdfs:label "Складова задачі (рівні декомпозиції Oз)"@uk ;
+    rdfs:comment "Ієрархія Oз «задача → підзадача → процедура → оператор»: кожен рівень є складовою попереднього."@uk ;
+    swe:lectureRef "Л2 сл. 15; Л3 сл. 5" ; swe:displayOrder 7 .
+swe:SubTask a owl:Class ; rdfs:subClassOf swe:TaskPart ;
+    rdfs:label "Підзадача"@uk ;
+    rdfs:subClassOf [ a owl:Restriction ; owl:onProperty swe:isPartOf ; owl:someValuesFrom swe:TaskIPZ ] ;
+    swe:lectureRef "Л2 сл. 15" ; swe:displayOrder 1 .
+swe:Procedure a owl:Class ; rdfs:subClassOf swe:TaskPart ;
+    rdfs:label "Процедура"@uk ;
+    rdfs:subClassOf [ a owl:Restriction ; owl:onProperty swe:isPartOf ; owl:someValuesFrom swe:SubTask ] ;
+    swe:lectureRef "Л2 сл. 15" ; swe:displayOrder 2 .
+swe:Operator a owl:Class ; rdfs:subClassOf swe:TaskPart ;
+    rdfs:label "Оператор"@uk ;
+    rdfs:subClassOf [ a owl:Restriction ; owl:onProperty swe:isPartOf ; owl:someValuesFrom swe:Procedure ] ;
+    swe:lectureRef "Л2 сл. 15" ; swe:displayOrder 3 .
+
+#################################################################
 # 6. Уніфіковані зв'язки між областями знань (табл. 3.5, додаток Б)
 #################################################################
 
@@ -559,11 +738,12 @@ swe:B_SH swe:isKindOf swe:P_H .
 swe:P_G swe:isPropertyOf swe:B_SH .
 swe:B_SH swe:isPropertyOf swe:B_Rq .
 swe:B_Rq swe:isPropertyOf swe:B_SP .
-swe:B_PI swe:isKindOf swe:P_Pr .
+swe:B_PI swe:isKindOf swe:B_Pj .
 swe:P_H swe:isPropertyOf swe:B_PI .
-swe:P_G swe:isPropertyOf swe:B_PI .
 swe:B_SP swe:isPropertyOf swe:B_PI .
-swe:B_Pj swe:isKindOf swe:B_PI .
+swe:B_Pj swe:isKindOf swe:P_Pr .
+swe:P_G swe:isPropertyOf swe:B_Pj .
+swe:P_Cost swe:isPropertyOf swe:B_Pj .
 swe:B_PI swe:isPartOf swe:B_LC .
 swe:P_D swe:isPropertyOf swe:B_LC .
 swe:B_Af swe:isKindOf swe:P_d .
@@ -714,7 +894,10 @@ swe:KA6 swe:notation "P6" ;
     swe:hasTechnology "DevOps, IaC, PaC, CI/CD, SRE, Platform Engineering, ITIL/ISO/IEC 20000-1"@uk ;
     swe:hasGoal "цілісність і стабільність системи; досягнення цільових рівнів обслуговування; мінімізація порушень від інцидентів"@uk ;
     swe:hasMetric "доступність; навантаження; продуктивність; обсяг транзакцій; використання ресурсів; кількість інцидентів"@uk ;
-    swe:hasIndicator "KPI у реальному часі за §4.2: телеметрія, результати V&V, активність користувачів, залежності, зміни конфігурації, безпека і стійкість"@uk .
+    swe:hasIndicator "KPI у реальному часі за §4.2: телеметрія, результати V&V, активність користувачів, залежності, зміни конфігурації, безпека і стійкість"@uk ;
+    swe:hasEffectiveness "ступінь виконання SLA: цільові доступність і неперервність; відсутність незапланованої недоступності; успішність відновлення після аварій"@uk ;
+    swe:hasEfficiency "ступінь автоматизації операцій; час реакції на відмови; вартість операцій і супроводження"@uk ;
+    swe:hasFunction "release candidate + вимоги + запити → працездатний сервіс у продуктивному середовищі + звіти + записи (планування, доставка, контроль)"@uk .
 
 swe:P6_1 a swe:SubProcess , owl:NamedIndividual ;
     rdfs:label "Планування операцій"@uk , "Software Engineering Operations Planning"@en ;
