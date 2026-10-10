@@ -283,8 +283,8 @@ swe:P_A a swe:PrimaryConcept , owl:NamedIndividual ;
 
 swe:P_M a swe:PrimaryConcept , owl:NamedIndividual ;
     rdfs:label "Модель"@uk ;
-    rdfs:comment "Подання системи, що розглядається, з погляду пов'язаної множини інтересів"@uk ;
-    rdfs:seeAlso "ISO/IEC/IEEE 24765 (2024) [12]; KA 18 §6 (с. 18-8)"@uk .
+    rdfs:comment "Абстрактне подання сутності або сукупності сутностей, що дає змогу відобразити, зрозуміти чи передбачити їхні властивості або характеристики в умовах чи ситуаціях, які цікавлять"@uk ;
+    rdfs:seeAlso "ISO/IEC/IEEE 42020:2019 [12]; KA 18 §6 (с. 18-8)"@uk .
 
 swe:P_m a swe:PrimaryConcept , owl:NamedIndividual ;
     rdfs:label "Вимірювання"@uk ;
