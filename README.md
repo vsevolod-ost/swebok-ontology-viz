@@ -1,4 +1,4 @@
-# Візуалізація онтології ІПЗ за SWEBOK Guide v4.0
+# Візуалізація онтології ІПЗ за SWEBOK Guide v4.0a
 
 Сайт: https://vsevolod-ost.github.io/swebok-ontology-viz/
 
